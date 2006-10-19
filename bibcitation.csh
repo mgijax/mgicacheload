@@ -12,6 +12,7 @@ cd `dirname $0` && source ./Configuration
 
 setenv TABLE BIB_Citation_Cache
 setenv OBJECTKEY 0
+setenv OBJECTKEY 32898
 
 setenv LOG	${MGICACHELOGDIR}/`basename $0`.log
 rm -rf $LOG
@@ -21,6 +22,7 @@ date | tee -a ${LOG}
 
 # Create the bcp file
 ./bibcitation.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} | tee -a ${LOG}
+exit 0
 
 # Exit if bcp file is empty
 

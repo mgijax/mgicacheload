@@ -6,9 +6,6 @@
 #
 # Create bcp file for BIB_Citation_Cache
 #
-# Uses environment variables to determine Server and Database
-# (DSQUERY and MGD).
-#
 # Usage:
 #	bibcitation.py [refskey]
 #
@@ -41,6 +38,9 @@ except:
 
 cdate = mgi_utils.date("%m/%d/%Y")
 createdBy = '1000'
+
+deleteSQL = 'delete from BIB_Citation_Cache where _Refs_key = %s'
+insertSQL = 'insert into BIB_Citation_Cache values (%s,%s,"%s","%s","%s","%s","%s","%s","%s",%s,%s,"%s","%s")'
 
 def showUsage():
 	'''
@@ -77,7 +77,7 @@ def process(refsKey):
 		'and a.prefixPart =  "MGI:" ' + \
 		'and a.preferred = 1 '
 
-	if refsKey != '0':
+	if refsKey != 0:
 	    cmd = cmd + 'and a._Object_key = %s' % (refsKey)
 
 	results = db.sql(cmd, 'auto')
@@ -96,7 +96,7 @@ def process(refsKey):
 		'and a.prefixPart =  "J:" ' + \
 		'and a.preferred = 1 '
 
-	if refsKey != '0':
+	if refsKey != 0:
 	    cmd = cmd + 'and a._Object_key = %s' % (refsKey)
 
 	results = db.sql(cmd, 'auto')
@@ -114,7 +114,7 @@ def process(refsKey):
 		'and a._LogicalDB_key = 29 ' + \
 		'and a.preferred = 1 '
 
-	if refsKey != '0':
+	if refsKey != 0:
 	    cmd = cmd + 'and a._Object_key = %s' % (refsKey)
 
 	results = db.sql(cmd, 'auto')
@@ -130,14 +130,15 @@ def process(refsKey):
 		'citation = r.journal + " " + r.date + ";" + r.vol + "(" + r.issue + "):" + r.pgs, ' + \
 		'short_citation = r._primary + ", " + r.journal + " " + r.date + ";" + r.vol + "(" + r.issue + "):" + r.pgs ' + \
 		'from BIB_Refs r, BIB_ReviewStatus s ' + \
-		'where r._ReviewStatus_key = s._ReviewStatus_key'
+		'where r._ReviewStatus_key = s._ReviewStatus_key '
 
-	if refsKey != '0':
+	if refsKey != 0:
 	    cmd = cmd + 'and r._Refs_key = %s' % (refsKey)
 
 	results = db.sql(cmd, 'auto')
 
-	if refsKey == '0':
+	if refsKey == 0:
+
 	    cacheBCP = open(outDir + '/%s.bcp' % (table), 'w')
 
 	    for r in results:
@@ -146,18 +147,18 @@ def process(refsKey):
 
 	        cacheBCP.write(mgi_utils.prvalue(key) + COLDL + \
 			     mgi_utils.prvalue(jnum[key]['numericPart']) + COLDL + \
-			     jnum[key]['accID'] + COLDL + \
-			     mgi[key]['accID'] + COLDL)
+			     mgi_utils.prvalue(jnum[key]['accID']) + COLDL + \
+			     mgi_utils.prvalue(mgi[key]['accID']) + COLDL)
 
 		if pubmed.has_key(key):
-		    cacheBCP.write(pubmed[key]['accID'] + COLDL)
+		    cacheBCP.write(mgi_utils.prvalue(pubmed[key]['accID']) + COLDL)
                 else:
 		    cacheBCP.write(COLDL)
 
-	        cacheBCP.write(r['reviewStatus'] + COLDL + \
+	        cacheBCP.write(mgi_utils.prvalue(r['reviewStatus']) + COLDL + \
 			       mgi_utils.prvalue(r['journal']) + COLDL + \
-			       r['short_citation'] + COLDL + \
-			       r['citation'] + COLDL + \
+			       mgi_utils.prvalue(r['short_citation']) + COLDL + \
+			       mgi_utils.prvalue(r['citation']) + COLDL + \
 			       createdBy + COLDL + \
 			       createdBy + COLDL + \
 			       cdate + COLDL + \
@@ -165,7 +166,29 @@ def process(refsKey):
 	        cacheBCP.flush()
 
 	    cacheBCP.close()
-#        else:
+
+        else:
+
+	    db.sql(deleteSQL % (refsKey), None)
+
+	    if pubmed.has_key(refsKey):
+		pubmedID = pubmed[refsKey]['accID']
+            else:
+		pubmedID = 'null'
+
+	    r = results[0]
+	    db.sql(insertSQL % ( \
+		mgi_utils.prvalue(refsKey), \
+		mgi_utils.prvalue(jnum[refsKey]['numericPart']), \
+		mgi_utils.prvalue(jnum[refsKey]['accID']), \
+	        mgi_utils.prvalue(mgi[refsKey]['accID']), \
+		mgi_utils.prvalue(pubmedID), \
+	        mgi_utils.prvalue(r['reviewStatus']), \
+		mgi_utils.prvalue(r['journal']), \
+		mgi_utils.prvalue(r['short_citation']), \
+		mgi_utils.prvalue(r['citation']), \
+		createdBy, createdBy, \
+		cdate, cdate), None)
 
 #
 # Main Routine
@@ -194,7 +217,7 @@ for opt in optlist:
 	elif opt[0] == '-P':
 		password = string.strip(open(opt[1], 'r').readline())
 	elif opt[0] == '-K':
-		objectKey = opt[1]
+		objectKey = string.atoi(opt[1])
 	else:
 		showUsage()
 
