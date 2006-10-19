@@ -1,0 +1,29 @@
+#!/bin/csh
+
+#
+# Install
+#
+
+cd `dirname $0` && source ./Configuration
+
+if ( ! -d ${MGICACHEDIR} ) then
+	mkdir -p ${MGICACHEDIR}
+endif
+
+if ( ! -d ${MGICACHEINDIR} ) then
+	mkdir -p ${MGICACHEINDIR}
+endif
+
+if ( ! -d ${MGICACHEBCPDIR} ) then
+	mkdir -p ${MGICACHEBCPDIR}
+endif
+
+if ( ! -d ${MGICACHELOGDIR} ) then
+	mkdir -p ${MGICACHELOGDIR}
+endif
+
+#
+# create symbolic links
+#
+
+ln -s bibcitation.py bibcitationByRef.py

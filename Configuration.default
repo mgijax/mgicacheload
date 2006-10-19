@@ -1,0 +1,33 @@
+#!/bin/csh
+
+#
+# Configuration.default
+#
+# Source this file from any csh script to set the
+# env variables
+#
+
+if ( ${?MGICONFIG} == 0 ) then
+	setenv MGICONFIG /usr/local/mgi/live/mgiconfig
+endif
+
+source ${MGICONFIG}/master.config.csh
+
+setenv MGICACHELOAD		${DBUTILS}/mgicacheload
+
+# directory
+setenv MGICACHEDIR		/data/loads/mgi/mgicacheload
+
+# input directory
+setenv MGICACHEINDIR		${MGICACHEDIR}/input
+
+# bcp output directory
+setenv MGICACHEBCPDIR		${MGICACHEDIR}/output
+
+# log directory
+setenv MGICACHELOGDIR		${MGICACHEDIR}/logs
+
+setenv COLDELIM		"&#&"
+setenv LINEDELIM	"\n"
+setenv CREATEDBY        1000
+
