@@ -36,11 +36,8 @@ try:
 except:
     table = 'BIB_Citation_Cache'
 
-cdate = mgi_utils.date("%m/%d/%Y")
-createdBy = '1000'
-
 deleteSQL = 'delete from BIB_Citation_Cache where _Refs_key = %s'
-insertSQL = 'insert into BIB_Citation_Cache values (%s,%s,"%s","%s","%s","%s","%s","%s","%s",%s,%s,"%s","%s")'
+insertSQL = 'insert into BIB_Citation_Cache values (%s,%s,"%s","%s","%s","%s","%s","%s","%s")'
 
 def showUsage():
 	'''
@@ -158,11 +155,7 @@ def process(refsKey):
 	        cacheBCP.write(mgi_utils.prvalue(r['reviewStatus']) + COLDL + \
 			       mgi_utils.prvalue(r['journal']) + COLDL + \
 			       mgi_utils.prvalue(r['short_citation']) + COLDL + \
-			       mgi_utils.prvalue(r['citation']) + COLDL + \
-			       createdBy + COLDL + \
-			       createdBy + COLDL + \
-			       cdate + COLDL + \
-			       cdate + LINEDL)
+			       mgi_utils.prvalue(r['citation']) + LINEDL)
 	        cacheBCP.flush()
 
 	    cacheBCP.close()
@@ -186,9 +179,7 @@ def process(refsKey):
 	        mgi_utils.prvalue(r['reviewStatus']), \
 		mgi_utils.prvalue(r['journal']), \
 		mgi_utils.prvalue(r['short_citation']), \
-		mgi_utils.prvalue(r['citation']), \
-		createdBy, createdBy, \
-		cdate, cdate), None)
+		mgi_utils.prvalue(r['citation'])), None)
 
 #
 # Main Routine
