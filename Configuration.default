@@ -13,8 +13,6 @@ endif
 
 source ${MGICONFIG}/master.config.csh
 
-setenv MGICACHELOAD		${DBUTILS}/mgicacheload
-
 # directory
 setenv MGICACHEDIR		/data/loads/mgi/mgicacheload
 

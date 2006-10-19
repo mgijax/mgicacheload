@@ -1,7 +1,7 @@
 #!/bin/csh -fx
 
 #
-# Usage:  bibcitation.csh
+# Usage:  vocgo.csh
 #
 # History
 #
@@ -11,7 +11,7 @@
 
 cd `dirname $0` && source ./Configuration
 
-setenv TABLE BIB_Citation_Cache
+setenv TABLE VOC_GO_Cache
 setenv OBJECTKEY 0
 
 setenv LOG	${MGICACHELOGDIR}/`basename $0`.log
@@ -21,7 +21,7 @@ touch $LOG
 date | tee -a ${LOG}
 
 # Create the bcp file
-./bibcitation.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} | tee -a ${LOG}
+./vocgo.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} | tee -a ${LOG}
 
 # Exit if bcp file is empty
 

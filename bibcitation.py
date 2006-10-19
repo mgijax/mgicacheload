@@ -7,9 +7,7 @@
 # Create bcp file for BIB_Citation_Cache
 #
 # Usage:
-#	bibcitation.py [refskey]
-#
-# If refskey is provided, then only create the bcp file for that reference.
+#	bibcitation.py -Sdbserver -Ddatabase -Uuser -Ppasswordfile -Kobjectkey
 #
 # Processing:
 #
@@ -56,12 +54,7 @@ def showUsage():
 	sys.stderr.write(usage)
 	sys.exit(1)
  
-def process(refsKey):
-	'''
-	#
-	# BIB_Citation_Cache is a cache table of reference data
-	#
-	'''
+def process(objectKey):
 
 	#
 	# mgi ids
@@ -74,8 +67,8 @@ def process(refsKey):
 		'and a.prefixPart =  "MGI:" ' + \
 		'and a.preferred = 1 '
 
-	if refsKey != 0:
-	    cmd = cmd + 'and a._Object_key = %s' % (refsKey)
+	if objectKey != 0:
+	    cmd = cmd + 'and a._Object_key = %s' % (objectKey)
 
 	results = db.sql(cmd, 'auto')
 	mgi = {}
@@ -93,8 +86,8 @@ def process(refsKey):
 		'and a.prefixPart =  "J:" ' + \
 		'and a.preferred = 1 '
 
-	if refsKey != 0:
-	    cmd = cmd + 'and a._Object_key = %s' % (refsKey)
+	if objectKey != 0:
+	    cmd = cmd + 'and a._Object_key = %s' % (objectKey)
 
 	results = db.sql(cmd, 'auto')
 	jnum = {}
@@ -111,8 +104,8 @@ def process(refsKey):
 		'and a._LogicalDB_key = 29 ' + \
 		'and a.preferred = 1 '
 
-	if refsKey != 0:
-	    cmd = cmd + 'and a._Object_key = %s' % (refsKey)
+	if objectKey != 0:
+	    cmd = cmd + 'and a._Object_key = %s' % (objectKey)
 
 	results = db.sql(cmd, 'auto')
 	pubmed = {}
@@ -129,12 +122,12 @@ def process(refsKey):
 		'from BIB_Refs r, BIB_ReviewStatus s ' + \
 		'where r._ReviewStatus_key = s._ReviewStatus_key '
 
-	if refsKey != 0:
-	    cmd = cmd + 'and r._Refs_key = %s' % (refsKey)
+	if objectKey != 0:
+	    cmd = cmd + 'and r._Refs_key = %s' % (objectKey)
 
 	results = db.sql(cmd, 'auto')
 
-	if refsKey == 0:
+	if objectKey == 0:
 
 	    cacheBCP = open(outDir + '/%s.bcp' % (table), 'w')
 
@@ -162,19 +155,19 @@ def process(refsKey):
 
         else:
 
-	    db.sql(deleteSQL % (refsKey), None)
+	    db.sql(deleteSQL % (objectKey), None)
 
-	    if pubmed.has_key(refsKey):
-		pubmedID = pubmed[refsKey]['accID']
+	    if pubmed.has_key(objectKey):
+		pubmedID = pubmed[objectKey]['accID']
             else:
 		pubmedID = 'null'
 
 	    r = results[0]
 	    db.sql(insertSQL % ( \
-		mgi_utils.prvalue(refsKey), \
-		mgi_utils.prvalue(jnum[refsKey]['numericPart']), \
-		mgi_utils.prvalue(jnum[refsKey]['accID']), \
-	        mgi_utils.prvalue(mgi[refsKey]['accID']), \
+		mgi_utils.prvalue(objectKey), \
+		mgi_utils.prvalue(jnum[objectKey]['numericPart']), \
+		mgi_utils.prvalue(jnum[objectKey]['accID']), \
+	        mgi_utils.prvalue(mgi[objectKey]['accID']), \
 		mgi_utils.prvalue(pubmedID), \
 	        mgi_utils.prvalue(r['reviewStatus']), \
 		mgi_utils.prvalue(r['journal']), \
