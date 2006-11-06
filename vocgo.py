@@ -63,7 +63,7 @@ def createBCPfile():
 
 print '%s' % mgi_utils.date()
 db.useOneConnection(1)
-db.set_sqlLogFunction(db.sqlLogAll)
+#db.set_sqlLogFunction(db.sqlLogAll)
 createBCPfile()
 db.useOneConnection(0)
 print '%s' % mgi_utils.date()
