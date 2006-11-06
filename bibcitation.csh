@@ -21,7 +21,7 @@ touch $LOG
 date | tee -a ${LOG}
 
 # Create the bcp file
-./bibcitation.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} | tee -a ${LOG}
+./bibcitation.py -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} | tee -a ${LOG}
 
 # Exit if bcp file is empty
 
