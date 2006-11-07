@@ -7,7 +7,7 @@
 # Create bcp file for BIB_Citation_Cache
 #
 # Usage:
-#	bibcitation.py -Sdbserver -Ddatabase -Uuser -Ppasswordfile -Kobjectkey
+#	bibcitation.py -Uuser -Ppasswordfile -Kobjectkey
 #
 #	if objectkey == 0, then retrieve all references
 #	if objectkey > 0, then retrieve reference specified by key
@@ -39,7 +39,7 @@ try:
 except:
     table = 'BIB_Citation_Cache'
 
-insertSQL = 'insert into BIB_Citation_Cache values (%s,%s,"%s","%s","%s","%s","%s","%s","%s")'
+insertSQL = 'insert into BIB_Citation_Cache values (%s,%s,"%s","%s","%s","%s","%s","%s","%s", %s, "%s")'
 
 def showUsage():
 	'''
@@ -62,7 +62,7 @@ def process(objectKey):
 	# reference attributes
 	#
 
-        cmd = 'select r._Refs_key, r.journal, reviewStatus = s.name, ' + \
+        cmd = 'select r._Refs_key, r.journal, reviewStatus = s.name, r.isReviewArticle, ' + \
 		'citation = r.journal + " " + r.date + ";" + r.vol + "(" + r.issue + "):" + r.pgs, ' + \
 		'short_citation = r._primary + ", " + r.journal + " " + r.date + ";" + r.vol + "(" + r.issue + "):" + r.pgs ' + \
 		'into #references ' + \
@@ -143,6 +143,11 @@ def process(objectKey):
 
 		key = r['_Refs_key']
 
+		if r['isReviewArticle'] == 1:
+		    isReviewArticle = 'Yes'
+                else:
+		    isReviewArticle = 'No'
+
 	        cacheBCP.write(mgi_utils.prvalue(key) + COLDL + \
 			     mgi_utils.prvalue(jnum[key]['numericPart']) + COLDL + \
 			     mgi_utils.prvalue(jnum[key]['accID']) + COLDL + \
@@ -155,8 +160,10 @@ def process(objectKey):
 
 	        cacheBCP.write(mgi_utils.prvalue(r['reviewStatus']) + COLDL + \
 			       mgi_utils.prvalue(r['journal']) + COLDL + \
+			       mgi_utils.prvalue(r['citation']) + COLDL + \
 			       mgi_utils.prvalue(r['short_citation']) + COLDL + \
-			       mgi_utils.prvalue(r['citation']) + LINEDL)
+			       mgi_utils.prvalue(r['isReviewArticle']) + COLDL + \
+			       isReviewArticle + LINEDL)
 	        cacheBCP.flush()
 
 	    cacheBCP.close()
@@ -173,6 +180,11 @@ def process(objectKey):
 
 		key = r['_Refs_key']
 
+		if r['isReviewArticle'] == 1:
+		    isReviewArticle = 'Yes'
+                else:
+		    isReviewArticle = 'No'
+
 	        if pubmed.has_key(key):
 		    pubmedID = pubmed[key]['accID']
                 else:
@@ -186,8 +198,10 @@ def process(objectKey):
 		    mgi_utils.prvalue(pubmedID), \
 	            mgi_utils.prvalue(r['reviewStatus']), \
 		    mgi_utils.prvalue(r['journal']), \
-		    mgi_utils.prvalue(r['short_citation']), \
-		    mgi_utils.prvalue(r['citation'])), None)
+		    mgi_utils.prvalue(r['citation']), \
+		    mgi_utils.prvalue(r['short_citation']),
+		    mgi_utils.prvalue(r['isReviewArticle']),
+		    mgi_utils.prvalue(isReviewArticle)), None)
 
 #
 # Main Routine
