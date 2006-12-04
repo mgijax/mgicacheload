@@ -39,7 +39,7 @@ try:
 except:
     table = 'IMG_Cache'
 
-insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s)'
+insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s)'
 
 def showUsage():
 	'''
@@ -59,7 +59,7 @@ def showUsage():
 def process(objectKey):
 
 	#
-	# images
+	# retrieve Assay (GXD) images that have thumbnails and are in pixel DB
 	#
 
         cmd = 'select i._Image_key, i._MGIType_key, i._Refs_key, i._ThumbnailImage_key, i.figureLabel, r.year ' + \
@@ -67,14 +67,15 @@ def process(objectKey):
 		'from IMG_Image i, BIB_Refs r ' + \
 		'where i._MGIType_key = 8 ' + \
 		'and i._ThumbnailImage_key is not null ' + \
-		'and i._Refs_key = r._Refs_key'
+		'and i.xdim is not null ' + \
+		'and i._Refs_key = r._Refs_key '
 
 	if objectKey > 0:
 	    cmd = cmd + 'and i._Refs_key = %s' % (objectKey)
 
-	# all images that don't have entries in the cache table
+	# images that don't have entries in the cache table
         elif objectKey == -1:
-	    cmd = cmd + 'and not exists (select 1 from %s c where i._Image_key = c._Image_key)' % (table)
+	    cmd = cmd + 'and not exists (select 1 from %s c where c._Image_key = i._Image_key' % (table)
 
 	# all images modified today
 
@@ -85,8 +86,11 @@ def process(objectKey):
 	db.sql('create index idx1 on #images(_Image_key)', None)
 
 	#
-	# assay/marker objects
+	# image/marker associations
 	#
+	# sort:  insitu assays only (1), both insitu & gel assays (2), gel assays only (3)
+	#
+
 	db.sql('select distinct i.*, _ObjectMGIType_key = 2, _Object_key = a._Marker_key, a._AssayType_key, sortOrder = 2 ' + \
 		'into #imageassoc ' + \
 		'from #images i, IMG_ImagePane p, GXD_Assay a ' + \
@@ -187,22 +191,29 @@ def process(objectKey):
 		'from #imageassoc a, %s c ' % (table) + \
 		'where a._Image_key = c._Image_key', None)
 
+	    x = 1
+	    prevKey = 0
+
 	    for r in results:
 
 		key = r['_Image_key']
 
-#	        db.sql(insertSQL % ( \
-#		    mgi_utils.prvalue(key), \
-#		    mgi_utils.prvalue(jnum[key]['numericPart']), \
-#		    mgi_utils.prvalue(jnum[key]['accID']), \
-#	            mgi_utils.prvalue(mgi[key]['accID']), \
-#		    mgi_utils.prvalue(pubmedID), \
-#	            mgi_utils.prvalue(r['reviewStatus']), \
-#		    mgi_utils.prvalue(r['journal']), \
-#		    mgi_utils.prvalue(r['citation']), \
-#		    mgi_utils.prvalue(r['short_citation']),
-#		    mgi_utils.prvalue(r['isReviewArticle']),
-#		    mgi_utils.prvalue(isReviewArticle)), None)
+		if prevKey != key:
+		    x = 1
+		    prevKey = key
+
+	        db.sql(insertSQL % ( \
+		    mgi_utils.prvalue(key), \
+		    mgi_utils.prvalue(r['_ThumbnailImage_key']), \
+		    mgi_utils.prvalue(r['_MGIType_key']), \
+		    mgi_utils.prvalue(r['_Object_key']), \
+		    mgi_utils.prvalue(r['_ObjectMGIType_key']), \
+		    mgi_utils.prvalue(r['_Refs_key']), \
+		    mgi_utils.prvalue(mgifullsize[key]), \
+		    mgi_utils.prvalue(mgithumbnail[key]), \
+		    mgi_utils.prvalue(x)), None)
+
+                x = x + 1
 
 #
 # Main Routine
