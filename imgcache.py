@@ -5,6 +5,7 @@
 # Purpose:
 #
 # Create bcp file for IMG_Cache
+# 	Assay (GXD) images that have thumbnails and are in Pixel DB
 #
 # Usage:
 #	imgcache.py -Uuser -Ppasswordfile -Kobjectkey
@@ -14,8 +15,6 @@
 #	if objectkey == -1, then retrieve images that do not have a cache record
 #	if objectkey == -2, then retrieve images that have a modification date = today
 #		
-# Processing:
-#
 # History
 #
 # 12/04/2006	lec
@@ -39,7 +38,7 @@ try:
 except:
     table = 'IMG_Cache'
 
-insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s")'
 
 def showUsage():
 	'''
@@ -78,7 +77,6 @@ def process(objectKey):
 	    cmd = cmd + 'and not exists (select 1 from %s c where c._Image_key = i._Image_key' % (table)
 
 	# all images modified today
-
         elif objectKey == -2:
 	    cmd = cmd + 'and convert(char(10), i.modification_date, 101) = convert(char(10), getdate(), 101)'
 
@@ -91,20 +89,23 @@ def process(objectKey):
 	# sort:  insitu assays only (1), both insitu & gel assays (2), gel assays only (3)
 	#
 
-	db.sql('select distinct i.*, _ObjectMGIType_key = 2, _Object_key = a._Marker_key, a._AssayType_key, sortOrder = 2 ' + \
+	db.sql('select distinct i.*, _ObjectMGIType_key = 2, _Object_key = a._Marker_key, ' + \
+		'a._AssayType_key, t.assayType, sortOrder = 2 ' + \
 		'into #imageassoc ' + \
-		'from #images i, IMG_ImagePane p, GXD_Assay a ' + \
+		'from #images i, IMG_ImagePane p, GXD_Assay a, GXD_AssayType t ' + \
 		'where i._Image_key = p._Image_key ' + \
-		'and p._ImagePane_key = a._ImagePane_key', None)
+		'and p._ImagePane_key = a._ImagePane_key ' + \
+		'and a._AssayType_key = t._AssayType_key', None)
 
 	db.sql('insert into #imageassoc ' + \
-		'select distinct i.*, 2, a._Marker_key, a._AssayType_key, sortOrder = 2 ' + \
-		'from #images i, IMG_ImagePane p, GXD_Assay a, GXD_Specimen s, GXD_InSituResult r, GXD_InSituResultImage g ' + \
+		'select distinct i.*, 2, a._Marker_key, a._AssayType_key, t.assayType, sortOrder = 2 ' + \
+		'from #images i, IMG_ImagePane p, GXD_Assay a, GXD_AssayType t, GXD_Specimen s, GXD_InSituResult r, GXD_InSituResultImage g ' + \
 		'where i._Image_key = p._Image_key ' + \
 		'and p._ImagePane_key = g._ImagePane_key ' + \
 		'and g._Result_key = r._Result_key ' + \
 		'and r._Specimen_key = s._Specimen_key ' + \
-		'and s._Assay_key = a._Assay_key', None)
+		'and s._Assay_key = a._Assay_key ' + \
+		'and a._AssayType_key = t._AssayType_key', None)
 
 	db.sql('create index idx1 on #imageassoc(_Image_key)', None)
 	db.sql('create index idx2 on #imageassoc(_Image_key, sortOrder, year, figureLabel)', None)
@@ -175,9 +176,11 @@ def process(objectKey):
 			     mgi_utils.prvalue(r['_Object_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_ObjectMGIType_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_Refs_key']) + COLDL + \
+			     mgi_utils.prvalue(r['_AssayType_key']) + COLDL + \
 			     mgi_utils.prvalue(mgifullsize[key]) + COLDL + \
 			     mgi_utils.prvalue(mgithumbnail[key]) + COLDL + \
-			     mgi_utils.prvalue(x) + LINEDL)
+			     mgi_utils.prvalue(x) + COLDL + \
+			     r['assayType'] + LINEDL)
 	        cacheBCP.flush()
 		x = x + 1
 
@@ -209,9 +212,11 @@ def process(objectKey):
 		    mgi_utils.prvalue(r['_Object_key']), \
 		    mgi_utils.prvalue(r['_ObjectMGIType_key']), \
 		    mgi_utils.prvalue(r['_Refs_key']), \
+		    mgi_utils.prvalue(r['_AssayType_key']), \
 		    mgi_utils.prvalue(mgifullsize[key]), \
 		    mgi_utils.prvalue(mgithumbnail[key]), \
-		    mgi_utils.prvalue(x)), None)
+		    mgi_utils.prvalue(x),\
+		    r['assayType']), None)
 
                 x = x + 1
 
@@ -251,7 +256,7 @@ db.set_sqlLogin(user, password, server, database)
 db.useOneConnection(1)
 
 if objectKey == 0:
-    db.set_sqlLogFunction(db.sqlLogAll)
+	db.set_sqlLogFunction(db.sqlLogAll)
 
 process(objectKey)
 db.useOneConnection(0)
