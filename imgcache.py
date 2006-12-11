@@ -217,7 +217,7 @@ def process(objectKey):
 		    mgi_utils.prvalue(mgifullsize[key]), \
 		    mgi_utils.prvalue(mgithumbnail[key]), \
 		    mgi_utils.prvalue(x),\
-		    r['assayType']),\
+		    r['assayType'],\
 		    r['figureLabel']), None)
 
                 x = x + 1
