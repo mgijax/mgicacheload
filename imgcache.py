@@ -38,7 +38,7 @@ try:
 except:
     table = 'IMG_Cache'
 
-insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s")'
+insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s","%s")'
 
 def showUsage():
 	'''
@@ -180,7 +180,8 @@ def process(objectKey):
 			     mgi_utils.prvalue(mgifullsize[key]) + COLDL + \
 			     mgi_utils.prvalue(mgithumbnail[key]) + COLDL + \
 			     mgi_utils.prvalue(x) + COLDL + \
-			     r['assayType'] + LINEDL)
+			     r['assayType'] + COLDL + \
+			     r['figureLabel'] + LINEDL)
 	        cacheBCP.flush()
 		x = x + 1
 
@@ -216,7 +217,8 @@ def process(objectKey):
 		    mgi_utils.prvalue(mgifullsize[key]), \
 		    mgi_utils.prvalue(mgithumbnail[key]), \
 		    mgi_utils.prvalue(x),\
-		    r['assayType']), None)
+		    r['assayType']),\
+		    r['figureLabel']), None)
 
                 x = x + 1
 
