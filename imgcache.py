@@ -38,7 +38,7 @@ try:
 except:
     table = 'IMG_Cache'
 
-insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s","%s")'
+insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s","%s","%s")'
 
 def showUsage():
 	'''
@@ -61,13 +61,15 @@ def process(objectKey):
 	# retrieve Assay (GXD) images that have thumbnails and are in pixel DB
 	#
 
-        cmd = 'select i._Image_key, i._MGIType_key, i._Refs_key, i._ThumbnailImage_key, i.figureLabel, r.year ' + \
+        cmd = 'select i._Image_key, i._MGIType_key, i._Refs_key, i._ThumbnailImage_key, ' + \
+		'i.figureLabel, ip._ImagePane_key, ip.paneLabel, r.year ' + \
 		'into #images ' + \
-		'from IMG_Image i, BIB_Refs r ' + \
+		'from IMG_Image i, BIB_Refs r, IMG_ImagePane ip ' + \
 		'where i._MGIType_key = 8 ' + \
 		'and i._ThumbnailImage_key is not null ' + \
 		'and i.xdim is not null ' + \
-		'and i._Refs_key = r._Refs_key '
+		'and i._Refs_key = r._Refs_key ' + \
+		'and i._Image_key = ip._Image_key'
 
 	if objectKey > 0:
 	    cmd = cmd + 'and i._Refs_key = %s' % (objectKey)
@@ -82,6 +84,7 @@ def process(objectKey):
 
 	db.sql(cmd, None)
 	db.sql('create index idx1 on #images(_Image_key)', None)
+	db.sql('create index idx2 on #images(_ImagePane_key)', None)
 
 	#
 	# image/marker associations
@@ -92,16 +95,14 @@ def process(objectKey):
 	db.sql('select distinct i.*, _ObjectMGIType_key = 2, _Object_key = a._Marker_key, ' + \
 		'a._AssayType_key, t.assayType, sortOrder = 2 ' + \
 		'into #imageassoc ' + \
-		'from #images i, IMG_ImagePane p, GXD_Assay a, GXD_AssayType t ' + \
-		'where i._Image_key = p._Image_key ' + \
-		'and p._ImagePane_key = a._ImagePane_key ' + \
+		'from #images i, GXD_Assay a, GXD_AssayType t ' + \
+		'where i._ImagePane_key = a._ImagePane_key ' + \
 		'and a._AssayType_key = t._AssayType_key', None)
 
 	db.sql('insert into #imageassoc ' + \
 		'select distinct i.*, 2, a._Marker_key, a._AssayType_key, t.assayType, sortOrder = 2 ' + \
-		'from #images i, IMG_ImagePane p, GXD_Assay a, GXD_AssayType t, GXD_Specimen s, GXD_InSituResult r, GXD_InSituResultImage g ' + \
-		'where i._Image_key = p._Image_key ' + \
-		'and p._ImagePane_key = g._ImagePane_key ' + \
+		'from #images i, GXD_Assay a, GXD_AssayType t, GXD_Specimen s, GXD_InSituResult r, GXD_InSituResultImage g ' + \
+		'where i._ImagePane_key = g._ImagePane_key ' + \
 		'and g._Result_key = r._Result_key ' + \
 		'and r._Specimen_key = s._Specimen_key ' + \
 		'and s._Assay_key = a._Assay_key ' + \
@@ -172,6 +173,7 @@ def process(objectKey):
 
 	        cacheBCP.write(mgi_utils.prvalue(key) + COLDL + \
 			     mgi_utils.prvalue(r['_ThumbnailImage_key']) + COLDL + \
+			     mgi_utils.prvalue(r['_ImagePane_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_MGIType_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_Object_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_ObjectMGIType_key']) + COLDL + \
@@ -181,7 +183,8 @@ def process(objectKey):
 			     mgi_utils.prvalue(mgithumbnail[key]) + COLDL + \
 			     mgi_utils.prvalue(x) + COLDL + \
 			     r['assayType'] + COLDL + \
-			     r['figureLabel'] + LINEDL)
+			     r['figureLabel'] + COLDL + \
+			     mgi_utils.prvalue(r['paneLabel']) + LINEDL)
 	        cacheBCP.flush()
 		x = x + 1
 
@@ -209,6 +212,7 @@ def process(objectKey):
 	        db.sql(insertSQL % ( \
 		    mgi_utils.prvalue(key), \
 		    mgi_utils.prvalue(r['_ThumbnailImage_key']), \
+		    mgi_utils.prvalue(r['_ImagePane_key']), \
 		    mgi_utils.prvalue(r['_MGIType_key']), \
 		    mgi_utils.prvalue(r['_Object_key']), \
 		    mgi_utils.prvalue(r['_ObjectMGIType_key']), \
@@ -218,7 +222,8 @@ def process(objectKey):
 		    mgi_utils.prvalue(mgithumbnail[key]), \
 		    mgi_utils.prvalue(x),\
 		    r['assayType'],\
-		    r['figureLabel']), None)
+		    r['figureLabel'], \
+		    mgi_utils.prvalue(r['paneLabel'])), None)
 
                 x = x + 1
 
