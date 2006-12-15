@@ -109,7 +109,7 @@ def process(objectKey):
 		'and a._AssayType_key = t._AssayType_key', None)
 
 	db.sql('create index idx1 on #imageassoc(_Image_key)', None)
-	db.sql('create index idx2 on #imageassoc(_Object_key, _Image_key, sortOrder, year, figureLabel)', None)
+	db.sql('create index idx2 on #imageassoc(_Object_key, sortOrder, year, figureLabel, _Image_key)', None)
 
 	# those with insitu assays only
 	db.sql('update #imageassoc set sortOrder = 1 from #imageassoc a1 where a1._AssayType_key in (1,6,9) ' + \
@@ -155,7 +155,9 @@ def process(objectKey):
 
 	# process all records
 
-	results = db.sql('select * from #imageassoc order by _Object_key, _Image_key, sortOrder, year desc, figureLabel', 'auto')
+	results = db.sql('select * from #imageassoc order by _Object_key, sortOrder, year desc, figureLabel, _Image_key', 'auto')
+
+	# generate a unique sequence number (starting at 1) for a given Marker/Image pair
 
 	x = 0
 	prevMarkerKey = 0
