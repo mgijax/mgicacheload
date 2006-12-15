@@ -109,7 +109,7 @@ def process(objectKey):
 		'and a._AssayType_key = t._AssayType_key', None)
 
 	db.sql('create index idx1 on #imageassoc(_Image_key)', None)
-	db.sql('create index idx2 on #imageassoc(_Image_key, sortOrder, year, figureLabel)', None)
+	db.sql('create index idx2 on #imageassoc(_Object_key, _Image_key, sortOrder, year, figureLabel)', None)
 
 	# those with insitu assays only
 	db.sql('update #imageassoc set sortOrder = 1 from #imageassoc a1 where a1._AssayType_key in (1,6,9) ' + \
@@ -155,9 +155,11 @@ def process(objectKey):
 
 	# process all records
 
-	results = db.sql('select * from #imageassoc order by sortOrder, _Image_key, year desc, figureLabel', 'auto')
-	x = 1
-	prevKey = 0
+	results = db.sql('select * from #imageassoc order by _Object_key, _Image_key, sortOrder, year desc, figureLabel', 'auto')
+
+	x = 0
+	prevMarkerKey = 0
+	prevImageKey = 0
 
 	if objectKey == 0:
 
@@ -165,28 +167,32 @@ def process(objectKey):
 
 	    for r in results:
 
-		key = r['_Image_key']
+		markerKey = r['_Object_key']
+		imageKey = r['_Image_key']
 
-		if prevKey != key:
-		    x = 1
-		    prevKey = key
+		if prevMarkerKey != markerKey:
+		    x = 0
+		    prevMarkerKey = markerKey
 
-	        cacheBCP.write(mgi_utils.prvalue(key) + COLDL + \
+		if prevImageKey != imageKey:
+		    x = x + 1
+		    prevImageKey = imageKey
+
+	        cacheBCP.write(mgi_utils.prvalue(imageKey) + COLDL + \
 			     mgi_utils.prvalue(r['_ThumbnailImage_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_ImagePane_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_MGIType_key']) + COLDL + \
-			     mgi_utils.prvalue(r['_Object_key']) + COLDL + \
+			     mgi_utils.prvalue(markerKey) + COLDL + \
 			     mgi_utils.prvalue(r['_ObjectMGIType_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_Refs_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_AssayType_key']) + COLDL + \
-			     mgi_utils.prvalue(mgifullsize[key]) + COLDL + \
-			     mgi_utils.prvalue(mgithumbnail[key]) + COLDL + \
+			     mgi_utils.prvalue(mgifullsize[imageKey]) + COLDL + \
+			     mgi_utils.prvalue(mgithumbnail[imageKey]) + COLDL + \
 			     mgi_utils.prvalue(x) + COLDL + \
 			     r['assayType'] + COLDL + \
 			     r['figureLabel'] + COLDL + \
 			     mgi_utils.prvalue(r['paneLabel']) + LINEDL)
 	        cacheBCP.flush()
-		x = x + 1
 
 	    cacheBCP.close()
 
@@ -198,34 +204,34 @@ def process(objectKey):
 		'from #imageassoc a, %s c ' % (table) + \
 		'where a._Image_key = c._Image_key', None)
 
-	    x = 1
-	    prevKey = 0
-
 	    for r in results:
 
-		key = r['_Image_key']
+		markerKey = r['_Object_key']
+		imageKey = r['_Image_key']
 
-		if prevKey != key:
-		    x = 1
-		    prevKey = key
+		if prevMarkerKey != markerKey:
+		    x = 0
+		    prevMarkerKey = markerKey
+
+		if prevImageKey != imageKey:
+		    x = x + 1
+		    prevImageKey = imageKey
 
 	        db.sql(insertSQL % ( \
-		    mgi_utils.prvalue(key), \
+		    mgi_utils.prvalue(imageKey), \
 		    mgi_utils.prvalue(r['_ThumbnailImage_key']), \
 		    mgi_utils.prvalue(r['_ImagePane_key']), \
 		    mgi_utils.prvalue(r['_MGIType_key']), \
-		    mgi_utils.prvalue(r['_Object_key']), \
+		    mgi_utils.prvalue(markerKey), \
 		    mgi_utils.prvalue(r['_ObjectMGIType_key']), \
 		    mgi_utils.prvalue(r['_Refs_key']), \
 		    mgi_utils.prvalue(r['_AssayType_key']), \
-		    mgi_utils.prvalue(mgifullsize[key]), \
-		    mgi_utils.prvalue(mgithumbnail[key]), \
+		    mgi_utils.prvalue(mgifullsize[imageKey]), \
+		    mgi_utils.prvalue(mgithumbnail[imageKey]), \
 		    mgi_utils.prvalue(x),\
 		    r['assayType'],\
 		    r['figureLabel'], \
 		    mgi_utils.prvalue(r['paneLabel'])), None)
-
-                x = x + 1
 
 #
 # Main Routine
