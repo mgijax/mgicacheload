@@ -109,7 +109,9 @@ def process(objectKey):
 		'and a._AssayType_key = t._AssayType_key', None)
 
 	db.sql('create index idx1 on #imageassoc(_Image_key)', None)
-	db.sql('create index idx2 on #imageassoc(_Object_key, sortOrder, year, figureLabel, _Image_key)', None)
+	db.sql('create index idx2 on #imageassoc(_ThumbnailImage_key)', None)
+	db.sql('create index idx3 on #imageassoc(_AssayType_key)', None)
+	db.sql('create index idx4 on #imageassoc(_Object_key, sortOrder, year, figureLabel, _Image_key)', None)
 
 	# those with insitu assays only
 	db.sql('update #imageassoc set sortOrder = 1 from #imageassoc a1 where a1._AssayType_key in (1,6,9) ' + \
@@ -122,36 +124,34 @@ def process(objectKey):
 		'and a2._AssayType_key in (1,6,9))', None)
 
 	#
-	# mgi ids for full size images
+	# pixeldb ids for full size images
 	#
 
         results = db.sql('select i._Image_key, a.numericPart ' + \
 		'from #imageassoc i, ACC_Accession a ' + \
 		'where i._Image_key = a._Object_key ' + \
 		'and a._MGIType_key = 9 ' + \
-		'and a._LogicalDB_key = 1 ' + \
-		'and a.prefixPart =  "MGI:" ' + \
+		'and a._LogicalDB_key = 19 ' + \
 		'and a.preferred = 1 ', 'auto')
 
-	mgifullsize = {}
+	pixfullsize = {}
         for r in results:
-	    mgifullsize[r['_Image_key']] = r['numericPart']
+	    pixfullsize[r['_Image_key']] = r['numericPart']
 
 	#
-	# mgi ids for thumbnail images
+	# pixeldb ids for thumbnail images
 	#
 
         results = db.sql('select i._Image_key, a.numericPart ' + \
 		'from #imageassoc i, ACC_Accession a ' + \
 		'where i._ThumbnailImage_key = a._Object_key ' + \
 		'and a._MGIType_key = 9 ' + \
-		'and a._LogicalDB_key = 1 ' + \
-		'and a.prefixPart =  "MGI:" ' + \
+		'and a._LogicalDB_key = 19 ' + \
 		'and a.preferred = 1 ', 'auto')
 
-	mgithumbnail = {}
+	pixthumbnail = {}
         for r in results:
-	    mgithumbnail[r['_Image_key']] = r['numericPart']
+	    pixthumbnail[r['_Image_key']] = r['numericPart']
 
 	# process all records
 
@@ -188,8 +188,8 @@ def process(objectKey):
 			     mgi_utils.prvalue(r['_ObjectMGIType_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_Refs_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_AssayType_key']) + COLDL + \
-			     mgi_utils.prvalue(mgifullsize[imageKey]) + COLDL + \
-			     mgi_utils.prvalue(mgithumbnail[imageKey]) + COLDL + \
+			     mgi_utils.prvalue(pixfullsize[imageKey]) + COLDL + \
+			     mgi_utils.prvalue(pixthumbnail[imageKey]) + COLDL + \
 			     mgi_utils.prvalue(x) + COLDL + \
 			     r['assayType'] + COLDL + \
 			     r['figureLabel'] + COLDL + \
@@ -228,8 +228,8 @@ def process(objectKey):
 		    mgi_utils.prvalue(r['_ObjectMGIType_key']), \
 		    mgi_utils.prvalue(r['_Refs_key']), \
 		    mgi_utils.prvalue(r['_AssayType_key']), \
-		    mgi_utils.prvalue(mgifullsize[imageKey]), \
-		    mgi_utils.prvalue(mgithumbnail[imageKey]), \
+		    mgi_utils.prvalue(pixfullsize[imageKey]), \
+		    mgi_utils.prvalue(pixthumbnail[imageKey]), \
 		    mgi_utils.prvalue(x),\
 		    r['assayType'],\
 		    r['figureLabel'], \
