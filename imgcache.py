@@ -111,16 +111,19 @@ def process(objectKey):
 	db.sql('create index idx1 on #imageassoc(_Image_key)', None)
 	db.sql('create index idx2 on #imageassoc(_ThumbnailImage_key)', None)
 	db.sql('create index idx3 on #imageassoc(_AssayType_key)', None)
-	db.sql('create index idx4 on #imageassoc(_Object_key, sortOrder, year, figureLabel, _Image_key)', None)
+	db.sql('create index idx4 on #imageassoc(_Object_key)', None)
+	db.sql('create index idx5 on #imageassoc(_Object_key, sortOrder, year, figureLabel, _Image_key)', None)
 
-	# those with insitu assays only
+	# those with insitu assays only (by marker)
 	db.sql('update #imageassoc set sortOrder = 1 from #imageassoc a1 where a1._AssayType_key in (1,6,9) ' + \
 		'and not exists (select 1 from #imageassoc a2 where a1._Image_key = a2._Image_key ' + \
+		'and a1._Object_key = a2._Object_key ' + \
 		'and a2._AssayType_key in (2,3,4,5,8))', None)
 
-	# those with gel assays only
+	# those with gel assays only (by marker)
 	db.sql('update #imageassoc set sortOrder = 3 from #imageassoc a1 where a1._AssayType_key in (2,3,4,5,8) ' + \
 		'and not exists (select 1 from #imageassoc a2 where a1._Image_key = a2._Image_key ' + \
+		'and a1._Object_key = a2._Object_key ' + \
 		'and a2._AssayType_key in (1,6,9))', None)
 
 	#
