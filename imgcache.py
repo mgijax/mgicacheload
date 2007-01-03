@@ -62,14 +62,17 @@ def process(objectKey):
 	#
 
         cmd = 'select i._Image_key, i._MGIType_key, i._Refs_key, i._ThumbnailImage_key, ' + \
-		'i.figureLabel, ip._ImagePane_key, ip.paneLabel, r.year ' + \
+		'i.figureLabel, ip._ImagePane_key, ip.paneLabel, r.year, a.numericPart ' + \
 		'into #images ' + \
-		'from IMG_Image i, BIB_Refs r, IMG_ImagePane ip ' + \
+		'from IMG_Image i, BIB_Refs r, IMG_ImagePane ip, ACC_Accession a ' + \
 		'where i._MGIType_key = 8 ' + \
 		'and i._ThumbnailImage_key is not null ' + \
 		'and i.xdim is not null ' + \
 		'and i._Refs_key = r._Refs_key ' + \
-		'and i._Image_key = ip._Image_key'
+		'and i._Image_key = ip._Image_key ' + \
+		'and r._Refs_key = a._Object_key ' + \
+		'and a._MGIType_key = 1 ' + \
+		'and a.prefixPart = "J:"'
 
 	if objectKey > 0:
 	    cmd = cmd + 'and i._Refs_key = %s' % (objectKey)
@@ -158,7 +161,7 @@ def process(objectKey):
 
 	# process all records
 
-	results = db.sql('select * from #imageassoc order by _Object_key, sortOrder, year desc, figureLabel, _Image_key', 'auto')
+	results = db.sql('select * from #imageassoc order by _Object_key, sortOrder, year desc, numericPart, figureLabel, _Image_key', 'auto')
 
 	# generate a unique sequence number (starting at 1) for a given Marker/Image pair
 
