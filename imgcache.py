@@ -209,8 +209,8 @@ def process(objectKey):
 	    # delete existing cache table entries
 
 	    db.sql('delete %s ' % (table) + \
-		'from #imageassoc a, %s c ' % (table) + \
-		'where a._Image_key = c._Image_key', None)
+		'from %s c ' % (table) + \
+		'where c._Refs_key = %s' % (objectKey), None)
 
 	    for r in results:
 
