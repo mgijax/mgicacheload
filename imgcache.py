@@ -179,12 +179,13 @@ def process(objectKey):
 		imageKey = r['_Image_key']
 
 		if prevMarkerKey != markerKey:
-		    x = 0
-		    prevMarkerKey = markerKey
+		    x = 1
 
-		if prevImageKey != imageKey:
+		elif prevImageKey != imageKey:
 		    x = x + 1
-		    prevImageKey = imageKey
+
+		prevMarkerKey = markerKey
+		prevImageKey = imageKey
 
 	        cacheBCP.write(mgi_utils.prvalue(imageKey) + COLDL + \
 			     mgi_utils.prvalue(r['_ThumbnailImage_key']) + COLDL + \
@@ -218,12 +219,13 @@ def process(objectKey):
 		imageKey = r['_Image_key']
 
 		if prevMarkerKey != markerKey:
-		    x = 0
-		    prevMarkerKey = markerKey
+		    x = 1
 
-		if prevImageKey != imageKey:
+		elif prevImageKey != imageKey:
 		    x = x + 1
-		    prevImageKey = imageKey
+
+		prevMarkerKey = markerKey
+		prevImageKey = imageKey
 
 	        db.sql(insertSQL % ( \
 		    mgi_utils.prvalue(imageKey), \
