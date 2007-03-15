@@ -1,3 +1,9 @@
+TAG: mgicacheload-3-5-2-10
+DATE: 03/15/2007
+STAFF: dbm
+CHANGES:
+1) Bug fix in imgcache.py
+
 TAG: mgicacheload-3-5-2-9
 DATE: 01/29/2007
 STAFF: lec
