@@ -8,7 +8,7 @@
 # 	Assay (GXD) images that have thumbnails and are in Pixel DB
 #
 # Usage:
-#	imgcache.py -Uuser -Ppasswordfile -Kobjectkey
+#	imgcache.py -Sserver -Ddatabase -Uuser -Ppasswordfile -Kobjectkey
 #
 #	if objectkey == 0, then retrieve all images
 #	if objectkey > 0, then retrieve images specified by key
@@ -38,7 +38,7 @@ try:
 except:
     table = 'IMG_Cache'
 
-insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s","%s","%s")'
+insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s","%s",%s)'
 
 def showUsage():
 	'''
@@ -48,6 +48,8 @@ def showUsage():
 	'''
  
 	usage = 'usage: %s\n' % sys.argv[0] + \
+		'-S server\n' + \
+		'-D database\n' + \
 		'-U user\n' + \
 		'-P password file\n' + \
 		'-K object key\n'
@@ -75,15 +77,15 @@ def process(objectKey):
 		'and a.prefixPart = "J:"'
 
 	if objectKey > 0:
-	    cmd = cmd + 'and i._Refs_key = %s' % (objectKey)
+	    cmd = cmd + ' and i._Refs_key = %s' % (objectKey)
 
 	# images that don't have entries in the cache table
         elif objectKey == -1:
-	    cmd = cmd + 'and not exists (select 1 from %s c where c._Image_key = i._Image_key' % (table)
+	    cmd = cmd + ' and not exists (select 1 from %s c where c._Image_key = i._Image_key' % (table)
 
 	# all images modified today
         elif objectKey == -2:
-	    cmd = cmd + 'and convert(char(10), i.modification_date, 101) = convert(char(10), getdate(), 101)'
+	    cmd = cmd + ' and convert(char(10), i.modification_date, 101) = convert(char(10), getdate(), 101)'
 
 	db.sql(cmd, None)
 	db.sql('create index idx1 on #images(_Image_key)', None)
@@ -209,9 +211,9 @@ def process(objectKey):
 
 	    # delete existing cache table entries
 
-	    db.sql('delete %s ' % (table) + \
-		'from %s c ' % (table) + \
-		'where c._Refs_key = %s' % (objectKey), None)
+	    db.sql('delete ' + \
+		'from %s ' % (table) + \
+		'where _Refs_key = %s' % (objectKey), None)
 
 	    for r in results:
 
@@ -227,6 +229,11 @@ def process(objectKey):
 		prevMarkerKey = markerKey
 		prevImageKey = imageKey
 
+		if r['paneLabel'] == None:
+		    paneLabel = 'null'
+		else:
+		    paneLabel = '"' + r['paneLabel'] + '"'
+
 	        db.sql(insertSQL % ( \
 		    mgi_utils.prvalue(imageKey), \
 		    mgi_utils.prvalue(r['_ThumbnailImage_key']), \
@@ -241,7 +248,7 @@ def process(objectKey):
 		    mgi_utils.prvalue(x),\
 		    r['assayType'],\
 		    r['figureLabel'], \
-		    mgi_utils.prvalue(r['paneLabel'])), None)
+		    paneLabel), None)
 
 #
 # Main Routine
@@ -250,7 +257,7 @@ def process(objectKey):
 print '%s' % mgi_utils.date()
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'U:P:K:')
+	optlist, args = getopt.getopt(sys.argv[1:], 'S:D:U:P:K:')
 except:
 	showUsage()
 
@@ -261,7 +268,11 @@ password = None
 objectKey = None
 
 for opt in optlist:
-	if opt[0] == '-U':
+	if opt[0] == '-S':
+		server = opt[1]
+	elif opt[0] == '-D':
+		database = opt[1]
+	elif opt[0] == '-U':
 		user = opt[1]
 	elif opt[0] == '-P':
 		password = string.strip(open(opt[1], 'r').readline())
