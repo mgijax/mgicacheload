@@ -1,3 +1,9 @@
+TAG: mgicacheload-3-5-2-11
+DATE: 03/20/2007
+STAFF: dbm
+CHANGES:
+1) Bug fix in imgcache.py when called with reference key
+
 TAG: mgicacheload-3-5-2-10
 DATE: 03/15/2007
 STAFF: dbm
