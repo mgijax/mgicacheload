@@ -1,3 +1,9 @@
+TAG: mgicacheload-3-5-2-12
+DATE: 03/28/2007
+STAFF: dbm
+CHANGES:
+1) Make image cache load callable from pixel DB
+
 TAG: mgicacheload-3-5-2-11
 DATE: 03/20/2007
 STAFF: dbm
