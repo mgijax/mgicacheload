@@ -21,17 +21,21 @@ touch $LOG
 date | tee -a ${LOG}
 
 # Create the bcp file
-./imgcache.py -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} | tee -a ${LOG}
+./imgcache.py -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} |& tee -a ${LOG}
 
-# Exit if bcp file is empty
-
-if ( -z ${MGICACHEBCPDIR}/${TABLE}.bcp ) then
-echo 'BCP File is empty' | tee -a ${LOG}
-exit 0
+# Exit if there was a failure creating the bcp file
+if ( $status ) then
+    echo 'Image cache load failed' | tee -a ${LOG}
+    exit 1
 endif
 
-# truncate table
+# Exit if bcp file is empty
+if ( -z ${MGICACHEBCPDIR}/${TABLE}.bcp ) then
+    echo 'BCP File is empty' | tee -a ${LOG}
+    exit 0
+endif
 
+# Truncate table
 ${MGD_DBSCHEMADIR}/table/${TABLE}_truncate.object | tee -a ${LOG}
 
 # Drop indexes
