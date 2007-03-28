@@ -8,8 +8,12 @@
 # 	Assay (GXD) images that have thumbnails and are in Pixel DB
 #
 # Usage:
-#	imgcache.py -Sserver -Ddatabase -Uuser -Ppasswordfile -Kobjectkey
+#	imgcache.py -Sserver -Ddatabase -Uuser
+#                   { -Ppasswordfile || -Wpassword }
+#                   { -J JNumber || -Kobjectkey }
 #
+#	if the JNumber is given, it is converted to a reference key and
+#		the script handles it as if it was called with objectkey > 0
 #	if objectkey == 0, then retrieve all images
 #	if objectkey > 0, then retrieve images specified by key
 #	if objectkey == -1, then retrieve images that do not have a cache record
@@ -27,6 +31,7 @@ import sys
 import os
 import getopt
 import string
+import time
 import db
 import mgi_utils
 
@@ -51,11 +56,30 @@ def showUsage():
 		'-S server\n' + \
 		'-D database\n' + \
 		'-U user\n' + \
-		'-P password file\n' + \
-		'-K object key\n'
+		'{-P password file || -W password}\n' + \
+		'{-J JNumber -K || object key}\n'
 
 	sys.stderr.write(usage)
 	sys.exit(1)
+
+
+def getRefKey(jNumber):
+	#
+	#  Get the reference key for the J-Number.
+	#
+	results = db.sql('select _Object_key from ACC_Accession ' + \
+		'where accID = "%s" ' % (jNumber) + \
+		'and _MGIType_key = 1 ' + \
+		'and _LogicalDB_key = 1 ' + \
+		'and preferred = 1', 'auto')
+
+	if len(results) == 0:
+	    sys.stderr.write('J-Number "' + jNumber + '" does not exist.\n')
+	    sys.stderr.write('Cannot refresh image cache.\n')
+	    sys.exit(1)
+
+	return results[0]['_Object_key']
+
  
 def process(objectKey):
 
@@ -257,7 +281,7 @@ def process(objectKey):
 print '%s' % mgi_utils.date()
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'S:D:U:P:K:')
+	optlist, args = getopt.getopt(sys.argv[1:], 'S:D:U:P:W:J:K:')
 except:
 	showUsage()
 
@@ -265,6 +289,7 @@ server = db.get_sqlServer()
 database = db.get_sqlDatabase()
 user = None
 password = None
+jNumber = None
 objectKey = None
 
 for opt in optlist:
@@ -276,6 +301,10 @@ for opt in optlist:
 		user = opt[1]
 	elif opt[0] == '-P':
 		password = string.strip(open(opt[1], 'r').readline())
+	elif opt[0] == '-W':
+		password = opt[1]
+	elif opt[0] == '-J':
+		jNumber = opt[1]
 	elif opt[0] == '-K':
 		objectKey = string.atoi(opt[1])
 	else:
@@ -283,11 +312,14 @@ for opt in optlist:
 
 if user is None or \
    password is None or \
-   objectKey is None:
+   (jNumber is None and objectKey is None):
 	showUsage()
 
 db.set_sqlLogin(user, password, server, database)
 db.useOneConnection(1)
+
+if jNumber is not None:
+	objectKey = getRefKey(jNumber)
 
 if objectKey == 0:
 	db.set_sqlLogFunction(db.sqlLogAll)
