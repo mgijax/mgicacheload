@@ -67,7 +67,7 @@ def message (
 	msg		# string; message to send to user in verbose mode
 	):
 	if VERBOSE:
-		sys.stderr.write ('%7.3f %s\n' % (time.time() - START_TIME,
+		sys.stderr.write ('%8.3f %s\n' % (time.time() - START_TIME,
 			msg))
 	return
 
@@ -290,7 +290,7 @@ providerMap = {
 	'GO' : 1,
 	'EC' : 8,
 	'SP_KW' : 13,
-	'protein_id' : 9,
+	'protein_id' : 13,
 	'RGD' : 4,
 	'PIR' : 78,
 	'RefSeq' : 27,
