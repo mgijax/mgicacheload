@@ -332,10 +332,13 @@ def synchronize (
 		cmds.append (DELETE_ACC % (key, EVIDENCE_MGITYPE,
 			idList.join ('","') ))
 
-	# currently only writing commands, not executing them
+# for debugging:
+#	print '\n'.join (cmds)
+#	print '-' * 60
 
-	print '\n'.join (cmds)
-	print '-' * 60
+	if cmds:
+		sql(cmds)
+
 	return
 
 def main():
