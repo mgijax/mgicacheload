@@ -5,7 +5,8 @@
 # Purpose:
 #
 # Create bcp file for IMG_Cache
-# 	Assay (GXD) images that have thumbnails and are in Pixel DB
+# 	Assay (GXD) and phenotype images that have thumbnails and are in
+#	Pixel DB
 #
 # Usage:
 #	imgcache.py -Sserver -Ddatabase -Uuser
@@ -20,11 +21,8 @@
 #	if objectkey == -2, then retrieve images that have a modification date = today
 #		
 # History
-#
-# 12/04/2006	lec
-#	- TR 7710
-#
-#
+# 04/17/2008 - jsb - altered to include phenotype images for TR8627
+# 12/04/2006 - lec - TR 7710
 '''
 
 import sys
@@ -91,7 +89,7 @@ def process(objectKey):
 		'i.figureLabel, ip._ImagePane_key, ip.paneLabel, r.year, a.numericPart ' + \
 		'into #images ' + \
 		'from IMG_Image i, BIB_Refs r, IMG_ImagePane ip, ACC_Accession a ' + \
-		'where i._MGIType_key = 8 ' + \
+		'where i._MGIType_key in (8, 11) ' + \
 		'and i._ThumbnailImage_key is not null ' + \
 		'and i.xdim is not null ' + \
 		'and i._Refs_key = r._Refs_key ' + \
@@ -121,12 +119,16 @@ def process(objectKey):
 	# sort:  insitu assays only (1), both insitu & gel assays (2), gel assays only (3)
 	#
 
+	# add GXD gel images
+
 	db.sql('select distinct i.*, _ObjectMGIType_key = 2, _Object_key = a._Marker_key, ' + \
 		'a._AssayType_key, t.assayType, sortOrder = 2 ' + \
 		'into #imageassoc ' + \
 		'from #images i, GXD_Assay a, GXD_AssayType t ' + \
 		'where i._ImagePane_key = a._ImagePane_key ' + \
 		'and a._AssayType_key = t._AssayType_key', None)
+
+	# add GXD in situ images
 
 	db.sql('insert into #imageassoc ' + \
 		'select distinct i.*, 2, a._Marker_key, a._AssayType_key, t.assayType, sortOrder = 2 ' + \
@@ -137,27 +139,49 @@ def process(objectKey):
 		'and s._Assay_key = a._Assay_key ' + \
 		'and a._AssayType_key = t._AssayType_key', None)
 
+	# must allow null assay type info to accommodate pheno images
+
+	db.sql ('alter table #imageassoc modify _AssayType_key null', None)
+	db.sql ('alter table #imageassoc modify assayType null', None)
+
+	# add pheno images
+
+	db.sql ('''insert into #imageassoc
+		select distinct i.*, 2, aa._Marker_key, null, null, 5
+		from #images i,
+			IMG_ImagePane_Assoc ipa,
+			ALL_Allele aa
+		where i._ImagePane_key = ipa._ImagePane_key
+			and ipa._Object_key = aa._Allele_key
+			and ipa._MGIType_key = 11	-- allele''', None)
+
+	# prioritize pheno images from J:98862, leave others as sort order 5
+
+	db.sql ('''update #imageassoc
+		set sortOrder = 4
+		where sortOrder = 5 and numericPart = 98862''', None)
+
+	# add indexes for performance
+
 	db.sql('create index idx1 on #imageassoc(_Image_key)', None)
 	db.sql('create index idx2 on #imageassoc(_ThumbnailImage_key)', None)
 	db.sql('create index idx3 on #imageassoc(_AssayType_key)', None)
 	db.sql('create index idx4 on #imageassoc(_Object_key)', None)
 	db.sql('create index idx5 on #imageassoc(_Object_key, sortOrder, year, figureLabel, _Image_key)', None)
 
-	# those with insitu assays only (by marker)
+	# update sort order for those with insitu assays only (by marker)
 	db.sql('update #imageassoc set sortOrder = 1 from #imageassoc a1 where a1._AssayType_key in (1,6,9) ' + \
 		'and not exists (select 1 from #imageassoc a2 where a1._Image_key = a2._Image_key ' + \
 		'and a1._Object_key = a2._Object_key ' + \
 		'and a2._AssayType_key in (2,3,4,5,8))', None)
 
-	# those with gel assays only (by marker)
+	# update sort order for those with gel assays only (by marker)
 	db.sql('update #imageassoc set sortOrder = 3 from #imageassoc a1 where a1._AssayType_key in (2,3,4,5,8) ' + \
 		'and not exists (select 1 from #imageassoc a2 where a1._Image_key = a2._Image_key ' + \
 		'and a1._Object_key = a2._Object_key ' + \
 		'and a2._AssayType_key in (1,6,9))', None)
 
-	#
-	# pixeldb ids for full size images
-	#
+	# get pixeldb ids for full size images
 
         results = db.sql('select i._Image_key, a.numericPart ' + \
 		'from #imageassoc i, ACC_Accession a ' + \
@@ -170,9 +194,7 @@ def process(objectKey):
         for r in results:
 	    pixfullsize[r['_Image_key']] = r['numericPart']
 
-	#
-	# pixeldb ids for thumbnail images
-	#
+	# get pixeldb ids for thumbnail images
 
         results = db.sql('select i._Image_key, a.numericPart ' + \
 		'from #imageassoc i, ACC_Accession a ' + \
@@ -187,13 +209,30 @@ def process(objectKey):
 
 	# process all records
 
-	results = db.sql('select * from #imageassoc order by _Object_key, sortOrder, year desc, numericPart, figureLabel, _Image_key', 'auto')
+	gxdResults = db.sql('''select *
+		from #imageassoc 
+		where sortOrder <= 3
+		order by _Object_key, sortOrder, year desc, numericPart,
+			figureLabel, _Image_key''', 'auto')
 
-	# generate a unique sequence number (starting at 1) for a given Marker/Image pair
+	phenoResults = db.sql('''select *
+		from #imageassoc 
+		where sortOrder > 3
+		order by _Object_key, sortOrder, numericPart desc,
+			figureLabel, _Image_key''', 'auto')
 
-	x = 0
+	results = gxdResults + phenoResults
+
+	# generate a unique sequence number (starting at 1) for a given
+	# Marker/Image pair for GXD.  The pheno images will use their own
+	# sequence numbers starting with 1.
+
+	x = 0			# sequence number
 	prevMarkerKey = 0
 	prevImageKey = 0
+	prevSortOrder = 0
+
+	# if not running for a specific reference, generate a file & use bcp
 
 	if objectKey == 0:
 
@@ -203,15 +242,21 @@ def process(objectKey):
 
 		markerKey = r['_Object_key']
 		imageKey = r['_Image_key']
+		sortOrder = r['sortOrder']
 
-		if prevMarkerKey != markerKey:
-		    x = 1
+		# if we have a new marker, or if we are just beginning the
+		# section of pheno images, restart our numbering at 1
+
+		if (prevMarkerKey != markerKey) or \
+		    ((prevSortOrder < 4) and (sortOrder >= 4)):
+			x = 1
 
 		elif prevImageKey != imageKey:
 		    x = x + 1
 
 		prevMarkerKey = markerKey
 		prevImageKey = imageKey
+		prevSortOrder = sortOrder
 
 	        cacheBCP.write(mgi_utils.prvalue(imageKey) + COLDL + \
 			     mgi_utils.prvalue(r['_ThumbnailImage_key']) + COLDL + \
@@ -224,12 +269,14 @@ def process(objectKey):
 			     mgi_utils.prvalue(pixfullsize[imageKey]) + COLDL + \
 			     mgi_utils.prvalue(pixthumbnail[imageKey]) + COLDL + \
 			     mgi_utils.prvalue(x) + COLDL + \
-			     r['assayType'] + COLDL + \
-			     r['figureLabel'] + COLDL + \
+			     mgi_utils.prvalue(r['assayType']) + COLDL + \
+			     mgi_utils.prvalue(r['figureLabel']) + COLDL + \
 			     mgi_utils.prvalue(r['paneLabel']) + LINEDL)
 	        cacheBCP.flush()
 
 	    cacheBCP.close()
+
+	# otherwise, use inline sql to update for the specific reference
 
         else:
 
@@ -243,8 +290,13 @@ def process(objectKey):
 
 		markerKey = r['_Object_key']
 		imageKey = r['_Image_key']
+		sortOrder = r['sortOrder']
 
-		if prevMarkerKey != markerKey:
+		# if we have a new marker, or if we are just beginning the
+		# section of pheno images, restart our numbering at 1
+
+		if (prevMarkerKey != markerKey) or \
+		    ((prevSortOrder < 4) and (sortOrder >= 4)):
 		    x = 1
 
 		elif prevImageKey != imageKey:
@@ -252,11 +304,26 @@ def process(objectKey):
 
 		prevMarkerKey = markerKey
 		prevImageKey = imageKey
+		prevSortOrder = sortOrder
+
+		# tweak values of fields that can be null
 
 		if r['paneLabel'] == None:
 		    paneLabel = 'null'
 		else:
 		    paneLabel = '"' + r['paneLabel'] + '"'
+
+		if r['assayType'] == None:
+		    assayType = 'null'
+		else:
+		    assayType = '"' + r['assayType'] + '"'
+
+		if r['_AssayType_key'] == None:
+		    assayTypeKey = 'null'
+		else:
+		    assayTypeKey = r['_AssayType_key']
+
+		# do the insertion one row at a time
 
 	        db.sql(insertSQL % ( \
 		    mgi_utils.prvalue(imageKey), \
@@ -266,12 +333,12 @@ def process(objectKey):
 		    mgi_utils.prvalue(markerKey), \
 		    mgi_utils.prvalue(r['_ObjectMGIType_key']), \
 		    mgi_utils.prvalue(r['_Refs_key']), \
-		    mgi_utils.prvalue(r['_AssayType_key']), \
+		    mgi_utils.prvalue(assayTypeKey), \
 		    mgi_utils.prvalue(pixfullsize[imageKey]), \
 		    mgi_utils.prvalue(pixthumbnail[imageKey]), \
 		    mgi_utils.prvalue(x),\
-		    r['assayType'],\
-		    r['figureLabel'], \
+		    mgi_utils.prvalue(assayType),\
+		    mgi_utils.prvalue(r['figureLabel']), \
 		    paneLabel), None)
 
 #

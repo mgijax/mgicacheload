@@ -12,6 +12,7 @@ import os
 import db
 import time
 import string
+import mgi_utils
 
 USAGE = '''Usage: %s <parameters>
     Required parameters:
@@ -146,7 +147,9 @@ def processCommandLine ():
 		ANNOT_KEY = options['-A']
 		message ('Running for annotation %s' % ANNOT_KEY)
 	else:
-		message ('Running for all annotated markers')
+		message ('Running for all annotated markers, start %s' % \
+			mgi_utils.date())
+		db.set_sqlLogFunction (db.sqlLogAll)
 	return
 
 def loadCaches():
@@ -385,7 +388,7 @@ def synchronize (
 
 	for (key, idList) in byKey.items():
 		cmds.append (DELETE_ACC % (key, EVIDENCE_MGITYPE,
-			idList.join ('","') ))
+			'","'.join (idList) ) )
 
 	if cmds:
 		# to not overwhelm sybase, pass along the commands in small
@@ -397,10 +400,12 @@ def synchronize (
 
 		while cmds:
 			sql (cmds[:step])
+
 			cmds = cmds[step:]
 			i = i + 1
 			if (i % 5) == 0:
 				message ('%d IDs left to go' % len(cmds))
+
 		message ('finished processing IDs')
 	else:
 		message ('no IDs to process')
