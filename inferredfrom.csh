@@ -17,6 +17,6 @@ touch $LOG
 
 date | tee -a ${LOG}
 
-./inferredfrom.py -S${MGD_DBSCHEMA} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} |& tee -a ${LOG}
+./inferredfrom.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} |& tee -a ${LOG}
 
 date | tee -a ${LOG}
