@@ -308,7 +308,8 @@ def diff ():
 		#   3. when we are done, anything which remains in
 		#	'INFERRED_FROM' needs to be added
 
-		if not INFERRED_FROM[objectKey].has_key(accID):
+		if (not INFERRED_FROM.has_key(objectKey)) or \
+			(not INFERRED_FROM[objectKey].has_key(accID)):
 			toDelete.append ( (objectKey, accID) )
 		else:
 			del INFERRED_FROM[objectKey][accID]
