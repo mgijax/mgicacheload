@@ -180,6 +180,7 @@ def loadCaches():
 
 	# get already-cached IDs from ACC_Accession
 
+	bulkDeleteIds()		# remove ones with no evidence records first
 	IDS = getIds()
 
 	message ('Looked up existing cached IDs')
@@ -243,6 +244,33 @@ def getInferredFrom (markerKey = None, annotKey = None):
 		key2ids[row['_AnnotEvidence_key']] = idDict
 
 	return key2ids
+
+def bulkDeleteIds():
+	# delete all evidence IDs from the accession table which have had
+	# their evidence lines removed from VOC_Evidence.  This is primarily
+	# to help bulk loads like the SwissProt load, which do full drop-and-
+	# reloads of evidence records.
+
+	results = sql ('''select count(1)
+		from ACC_Accession a
+		where a._MGIType_key = %d
+			and not exists (select 1
+				from VOC_Evidence e
+				where a._Object_key = e._AnnotEvidence_key)
+		''' % (EVIDENCE_MGITYPE) )
+
+	count = results[0]['']
+
+	sql ('''delete ACC_Accession
+		from ACC_Accession a
+		where a._MGIType_key = %d
+			and not exists (select 1
+				from VOC_Evidence e
+				where a._Object_key = e._AnnotEvidence_key)
+		''' % (EVIDENCE_MGITYPE) )
+
+	message ('bulk deleted %d IDs which had no evidence record' % count)
+	return
 
 def getIds():
 	ids = []
