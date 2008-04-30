@@ -367,7 +367,7 @@ providerMap = {
 	'uniprot' : 13,
 	'uniprotkb' : 13,
 	'ncbi' : 27,
-	'embl' : 41,
+	'embl' : 9,
 	'interpro' : 28,
 	'go' : 1,
 	'ec' : 8,
