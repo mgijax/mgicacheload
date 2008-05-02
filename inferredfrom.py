@@ -367,11 +367,11 @@ providerMap = {
 	'uniprot' : 13,
 	'uniprotkb' : 13,
 	'ncbi' : 27,
-	'embl' : 41,		# should be 9
+	'embl' : 9,
 	'interpro' : 28,
 	'go' : 1,
 	'ec' : 8,
-	'sp_kw' : 13,
+	'sp_kw' : None,
 	'protein_id' : 13,
 	'rgd' : 4,
 	'pir' : 78,
@@ -382,6 +382,15 @@ def synchronize (
 	toDelete,
 	toAdd
 	):
+	global providerMap
+
+	results = sql ('''select _LogicalDB_key 
+		from ACC_LogicalDB 
+		where name = "SP-KW" ''')
+	if len(results) != 1:
+		bailout ('Cannot find logical database SP-KW')
+	providerMap['sp_kw'] = results[0]['_LogicalDB_key']
+
 	cmds = []
 
 	# one command for each additional ID for each key
@@ -428,7 +437,25 @@ def synchronize (
 		i = 0
 
 		while cmds:
-			sql (cmds[:step])
+			# skip our sql() wrapper and use db.sql directly
+			# so we can have more granular control over errors
+
+			try:
+				db.sql (cmds[:step], 'auto')
+			except:
+				# batch failed; try individually to do as
+				# many as possible, and report errant ones
+
+				for cmd in cmds[:step]:
+					try:
+						db.sql (cmd, 'auto')
+					except:
+						exc_val = sys.exc_info()[1]
+						message ('Error: Failed command: %s'\
+							% cmd)
+						sys.stderr.write (
+							'Cause:\n%s\n' % \
+							exc_val)
 
 			cmds = cmds[step:]
 			i = i + 1
