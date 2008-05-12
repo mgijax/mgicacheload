@@ -1,3 +1,17 @@
+TAG: mgicacheload-4-0-2-0
+DATE: 05/12/2008
+STAFF: jsb
+CHANGES:
+1) merged changes from tr8747 branch
+
+TAG: mgicacheload-tr8747-1
+DATE: 05/07/2008
+STAFF: jsb, lec
+CHANGES:
+1) update to imgcache.py for pheno images
+2) addition of inferredfrom.py and inferredfrom.csh for TR8633
+3) addition of inferredcheck.py to verify #2 above
+
 TAG: mgicacheload-tr8747-BP
 DATE: 04/15/2008
 STAFF: jsb
