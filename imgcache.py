@@ -21,8 +21,14 @@
 #	if objectkey == -2, then retrieve images that have a modification date = today
 #		
 # History
+#
+# 05/27/2008 - lec
+#	- fix insertSQL for assay type
+#
 # 04/17/2008 - jsb - altered to include phenotype images for TR8627
+#
 # 12/04/2006 - lec - TR 7710
+#
 '''
 
 import sys
@@ -41,7 +47,7 @@ try:
 except:
     table = 'IMG_Cache'
 
-insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s","%s",%s)'
+insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s",%s)'
 
 def showUsage():
 	'''
@@ -339,7 +345,7 @@ def process(objectKey):
 		    mgi_utils.prvalue(x),\
 		    mgi_utils.prvalue(assayType),\
 		    mgi_utils.prvalue(r['figureLabel']), \
-		    paneLabel), None)
+		    mgi_utils.prvalue(paneLabel)), None)
 
 #
 # Main Routine
