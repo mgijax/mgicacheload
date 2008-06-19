@@ -1,478 +1,332 @@
 #!/usr/local/bin/python
 
-# Purpose: to synchronize the accession IDs associated with a GO annotation
-#	with the IDs specified in that annotation's "Inferred From" field
-# Usage: see USAGE variable below
-# History:
-#	4/3/08 - jsb - introduced for TR8633 in MGI 4.B release
+'''
+#
+# Purpose: Load GO Inferred-From text data into the Accession table
+#
+# Usage:
+#	inferredFrom.py -Sserver -Ddatabase -Uuser -Ppasswordfile 
+#		{ -Kmarkerkey | -BcreatedBy }
+#
+#	if objectkey == 0, then retrieve all inferred-from
+#	if objectkey > 0, then retrieve inferred-from specified by key
+#	if objectkey == -1, then run the checker
+#	if createdBy is not None, then retrieve inferred-from specified by the created by login (ex."swissload")
+#		
+# History
+#
+# 06/11/2008 - lec
+#	- TR9057/fixes to original code
+#
+# 4/3/08 - jsb - introduced for TR8633 in MGI 4.B release
+#
+'''
 
 import sys
-import getopt
 import os
-import db
-import time
+import getopt
 import string
+import re
+import db
 import mgi_utils
+import accessionlib
 
-USAGE = '''Usage: %s <parameters>
-    Required parameters:
-	-S <server>   : name of the database server
-	-D <database> : name of the database within that server
-	-U <user>     : database username
-	-P <pwd file> : path to file containing that user's database password
-    Optional parameters:
-	-M <marker key>     : process all annotations for specified marker
-	-A <annotation key> : process only specified annotation
-	-v                  : run in verbose mode (more reporting output)
-    Notes:
-    	1. At most one of -M or -A may be specified.
-	2. If neither -M or -A are specified, we process all GO annotations.
-	3. At present, we use inline SQL rather than BCP for all updates.
-	   This will be slower for a full refresh, but should not happen
-	   often, so we'll take the performance hit and save the extra
-	   development time.
-''' % sys.argv[0]
+objectKey = None
+createdBy = None
 
-MARKER_KEY = None		# string; single _Marker_keys to process
-ANNOT_KEY = None		# string; single _Annot_key to process
-VERBOSE = False			# boolean; run in verbose mode?
-START_TIME = time.time()	# float; time in seconds at which script began
-EVIDENCE_MGITYPE = None		# int; _MGIType_key for "Annotation Evidence"
-
-# dictionary mapping evidence key to a dictionary which maps each id to its
-# (provider) prefix
-INFERRED_FROM = None
-
-# list of dictionaries; each dictionary defines one _Object_key (really an
-# _AnnotEvidence_key) and one accID
-IDS = None
-
-def bailout (
-	err = None,		# string; error message to give to user
-	showUsage = False	# boolean; show the Usage statement?
-	):
-	if showUsage:
-		sys.stderr.write (USAGE)
-	if err:
-		sys.stderr.write ('Error: %s\n' % err)
-	sys.exit(1)
-
-def sql (
-	cmd
-	):
-	try:
-		results = db.sql (cmd, 'auto')
-	except:
-		bailout ('Failed on query: %s' % str(cmd))
-	return results
-
-def optionsToDict (
-	options		# list of (option flag, value) pairs
-	):
-	dict = {}
-	for (flag, value) in options:
-		dict[flag] = value
-	return dict
-
-def message (
-	msg		# string; message to send to user in verbose mode
-	):
-	if VERBOSE:
-		sys.stderr.write ('%8.3f %s\n' % (time.time() - START_TIME,
-			msg))
-	return
-
-def getMarkerKeys():
-	cmd = '''SELECT DISTINCT _Object_key
-		FROM VOC_Annot
-		WHERE _AnnotType_key = 1000	-- GO/Marker'''
-
-	results = sql(cmd)
-
-	markers = []
-	for row in results:
-		markers.append (row['_Object_key'])
-	return markers
-
-def processCommandLine ():
-	global VERBOSE, MARKER_KEY, ANNOT_KEY
-
-	try:
-		optlist, args = getopt.getopt (sys.argv[1:], 'S:D:U:P:M:A:v')
-	except getopt.GetoptError:
-		bailout ('Invalid command-line flag(s)', True)
-
-	if len(args) > 0:
-		bailout ('Too many command-line arguments', True)
-
-	options = optionsToDict (optlist)
-
-	if not options.has_key('-S'):
-		bailout ('Must specify database server (-S)', True)
-	if not options.has_key('-D'):
-		bailout ('Must specify database name (-D)', True)
-	if not options.has_key('-U'):
-		bailout ('Must specify database user (-U)', True)
-	if not options.has_key('-P'):
-		bailout ('Must specify password file (-P)', True)
-	if options.has_key('-M') and options.has_key('-A'):
-		bailout ('Cannot specify both -M and -A', True)
-
-	pwdFile = options['-P']
-	if not os.path.exists(pwdFile):
-		bailout ('Cannot find password file: %s' % pwdFile, True)
-	try:
-		fp = open(pwdFile, 'r')
-		password = fp.readline().rstrip()
-		fp.close()
-	except:
-		bailout ('Cannot read password file: %s' % pwdFile, True)
-
-	db.set_sqlLogin (options['-U'], password, options['-S'],
-		options['-D'])
-	db.useOneConnection(1)
-
-	# fast, easy query to check if login worked okay:
-	sql ('SELECT COUNT(1) FROM MGI_dbInfo')
-
-	if options.has_key('-v'):
-		VERBOSE = True
-		message ('Running against %s..%s as user %s' % (
-			options['-S'], options['-D'], options['-U']))
-
-	if options.has_key('-M'):
-		MARKER_KEY = options['-M']
-		message ('Running for marker %s' % MARKER_KEY)
-	elif options.has_key('-A'):
-		ANNOT_KEY = options['-A']
-		message ('Running for annotation %s' % ANNOT_KEY)
-	else:
-		message ('Running for all annotated markers, start %s' % \
-			mgi_utils.date())
-		db.set_sqlLogFunction (db.sqlLogAll)
-	return
-
-def loadCaches():
-	# load any data we are going to store in memory caches
-
-	global EVIDENCE_MGITYPE, INFERRED_FROM, IDS
-
-	# get the MGI Type for "Annotation Evidence"
-
-	results = sql ('''SELECT _MGIType_key
-		FROM ACC_MGIType
-		WHERE name = "Annotation Evidence"''')
-
-	if not results:
-		bailout ('Cannot find _MGIType_key for "Annotation Evidence"')
-	EVIDENCE_MGITYPE = results[0]['_MGIType_key']
-	message ('Found MGI Type')
-
-	# get data from VOC_Evidence.inferredFrom
-
-	if ANNOT_KEY != None:
-		INFERRED_FROM = getInferredFrom (annotKey = ANNOT_KEY)
-	elif MARKER_KEY != None:
-		INFERRED_FROM = getInferredFrom (markerKey = MARKER_KEY)
-	else:
-		INFERRED_FROM = getInferredFrom()
-	message ('Looked up "inferredFrom" values')
-
-	# get already-cached IDs from ACC_Accession
-
-	bulkDeleteIds()		# remove ones with no evidence records first
-	IDS = getIds()
-
-	message ('Looked up existing cached IDs')
-	return
-
-def getInferredFrom (markerKey = None, annotKey = None):
-	# returns dictionary mapping evidence key to a dictionary which maps
-	# each id to its (provider) prefix
-
-	# note that we must even retrieve inferredFrom pieces which are null,
-	# so we will know when a user has removed existing IDs from that field
-
-	cmd = '''SELECT va._Annot_key, 
-			ve._AnnotEvidence_key,
-			ve.inferredFrom
-		FROM VOC_Annot va,
-			VOC_Evidence ve
-		WHERE va._AnnotType_key = 1000		-- GO/Marker
-			AND va._Annot_key = ve._Annot_key %s'''
-
-	if annotKey:
-		cmd = cmd % ('AND va._Annot_key = %s' % annotKey)
-	elif markerKey:
-		cmd = cmd % ('AND va._Object_key = %s' % markerKey)
-	else:
-		# else: retreve all inferredFrom pieces
-		cmd = cmd % ''
-
-	results = sql (cmd)
-
-	key2ids = {}
-
-	for row in results:
-		inferredFrom = row['inferredFrom']
-		ids = []
-
-		if inferredFrom != None:
-			inferredFrom = inferredFrom.strip()
-			if len(inferredFrom) > 0:
-				if inferredFrom.find('|') >= 0:
-					ids = inferredFrom.split('|')
-				elif inferredFrom.find(',') >= 0:
-					ids = inferredFrom.split(',')
-				else:
-					ids = [inferredFrom]
-
-				ids = map (string.strip, ids)
-
-		idDict = {}
-		for id in ids:
-			colonPos = id.find(':')
-			if colonPos >= 0:
-				prefix = id[:colonPos]
-				if prefix != 'MGI':
-					id = id[colonPos+1:]
-			else:
-				prefix = None
-
-			idDict[id] = prefix
-
-		key2ids[row['_AnnotEvidence_key']] = idDict
-
-	return key2ids
-
-def bulkDeleteIds():
-	# delete all evidence IDs from the accession table which have had
-	# their evidence lines removed from VOC_Evidence.  This is primarily
-	# to help bulk loads like the SwissProt load, which do full drop-and-
-	# reloads of evidence records.
-
-	results = sql ('''select count(1)
-		from ACC_Accession a
-		where a._MGIType_key = %d
-			and not exists (select 1
-				from VOC_Evidence e
-				where a._Object_key = e._AnnotEvidence_key)
-		''' % (EVIDENCE_MGITYPE) )
-
-	count = results[0]['']
-
-	sql ('''delete ACC_Accession
-		from ACC_Accession a
-		where a._MGIType_key = %d
-			and not exists (select 1
-				from VOC_Evidence e
-				where a._Object_key = e._AnnotEvidence_key)
-		''' % (EVIDENCE_MGITYPE) )
-
-	message ('bulk deleted %d IDs which had no evidence record' % count)
-	return
-
-def getIds():
-	ids = []
-
-	# if we specified an annotation key or a marker key, then we only want
-	# to retrieve IDs for the relevant annotation evidence keys
-
-	if (ANNOT_KEY != None) or (MARKER_KEY != None):
-		evidenceKeys = INFERRED_FROM.keys()
-		keySets = []
-		while len(evidenceKeys) > 200:
-			keySets.append ( evidenceKeys[:200] )
-			evidenceKeys = evidenceKeys[200:]
-		if evidenceKeys:
-			keySets.append ( evidenceKeys )
-
-		# retrieve existing cached IDs from ACC_Accession for each key
-
-		for keySet in keySets:
-			results = sql ('''SELECT accID,
-					_Object_key
-				FROM ACC_Accession
-				WHERE _MGIType_key = %s
-					AND _Object_key IN (%s)''' % (
-						EVIDENCE_MGITYPE,
-						','.join (map(str, keySet)) ))
-			ids = ids + results
-
-	# otherwise, retrieve all IDs for annotation evidence keys
-
-	else:
-		ids = sql ('''SELECT accID,
-				_Object_key
-			FROM ACC_Accession
-			WHERE _MGIType_key = %s''' % EVIDENCE_MGITYPE)
-	return ids
-
-def diff ():
-	# compare the string entered by the user (stored in VOC_Evidence's
-	# inferredFrom field, and bundled in 'inferredFrom' parameter) with
-	# the cached data currently in ACC_Accession 
-	# note: destroys value of 'INFERRED_FROM' during processing
-
-	global INFERRED_FROM
-
-	# chunk the evidence keys into sets of up to 200, so we can be
-	# flexible enough to handle any size 'inferredFrom'
-
-	# retrieve existing cached IDs from ACC_Accession for each key
-
-	toDelete = []
-
-	for row in IDS:
-		accID = row['accID']
-		objectKey = row['_Object_key']
-
-		# we are going to handle the diff in a single pass
-		# through the set of results; for each accession ID...
-		#   1. if not still in 'INFERRED_FROM', add it to a
-		#	list of ones to delete
-		#   2. if it is still there, remove it from there (in
-		#	memory, not in the database)
-		#   3. when we are done, anything which remains in
-		#	'INFERRED_FROM' needs to be added
-
-		if (not INFERRED_FROM.has_key(objectKey)) or \
-			(not INFERRED_FROM[objectKey].has_key(accID)):
-			toDelete.append ( (objectKey, accID) )
-		else:
-			del INFERRED_FROM[objectKey][accID]
-
-	toAdd = []
-	for (objectKey, idDict) in INFERRED_FROM.items():
-		for (id, provider) in idDict.items():
-			if len(id.strip()) > 0:
-				toAdd.append ( (objectKey, id, provider) )
-
-	message ('computed diff')
-
-	return toDelete, toAdd
-
-# fill in: object key, acc ID, logical DB key
-INSERT_ACC = 'EXEC ACC_insert %d, "%s", %d, "Annotation Evidence", -1, 1, 1'
-
-# fill in: object key, MGI Type key, one or more IDs
-DELETE_ACC = '''DELETE FROM ACC_Accession
-	WHERE _Object_key = %d
-		AND _MGIType_key = %d
-		AND accID IN ("%s")'''
+execSQL = 'exec ACC_insertNoChecks %d,"%s",%d,"Annotation Evidence",-1,1,1'
+eiErrorStatus = '%s     %s     %s\n'
 
 # maps provider prefix to logical database key
+# using lowercase
 providerMap = {
 	'mgi' : 1,
+	'go' : 1,
+	'embl' : 9,
+	'ec' : 8,
+	'genedb_spombe' : 115,
+	'interpro' : 28,
+	'ncbi' : 27,
+	'pir' : 78,
+	'protein_id' : 13,
+	'refseq' : 27,
+	'rgd' : 4,
+	'sp_kw' : 111,
+	'sgd' : 114,
 	'uniprot' : 13,
 	'uniprotkb' : 13,
-	'ncbi' : 27,
-	'embl' : 9,
-	'interpro' : 28,
-	'go' : 1,
-	'ec' : 8,
-	'sp_kw' : None,
-	'protein_id' : 13,
-	'rgd' : 4,
-	'pir' : 78,
-	'refseq' : 27,
 	}
 
-def synchronize (
-	toDelete,
-	toAdd
-	):
-	global providerMap
+#
+# checks for EMBL accession ids (see ACC_Accession_Insert trigger)
+#
+#	1 alpah, 5 numerics: [A-Z]     [0-9][0-9][0-9][0-9][0-9]
+#	2 alpha, 6 numerics: [A-Z][A-Z][0-9][0-9][0-9][0-9][0-9][0-9]
+#
+embl_re1 = re.compile("^[A-Z]{1,1}[0-9]{5,5}$")
+embl_re2 = re.compile("^[A-Z]{2,2}[0-9]{6,6}$")
 
-	results = sql ('''select _LogicalDB_key 
-		from ACC_LogicalDB 
-		where name = "SP-KW" ''')
-	if len(results) != 1:
-		bailout ('Cannot find logical database SP-KW')
-	providerMap['sp_kw'] = results[0]['_LogicalDB_key']
+# dictionary of existing cache
+cacheIF = {}
 
-	cmds = []
+def showUsage():
+	#
+	# Purpose:  Displayes the correct usage of this program and exists
+	#
+ 
+	usage = 'usage: %s\n' % sys.argv[0] + \
+		'-S server\n' + \
+		'-D database\n' + \
+		'-U user\n' + \
+		'-P password file\n' + \
+		'{ -K object key | -B createdByName }\n'
 
-	# one command for each additional ID for each key
+	exit(1, usage)
 
-	for (key, id, provider) in toAdd:
-		if provider:
-			lowerProv = provider.lower()
+def exit(status, message = None):
+	#
+	# requires:
+	#	status, the numeric exit status (integer)
+	#	message (string)
+	#
+	# effects:
+	# Print message to stderr and exists
+	#
+	# returns:
+	#
+
+	if message is not None:
+		sys.stderr.write('\n' + str(message) + '\n')
+
+	db.useOneConnection()
+	sys.exit(status)
+
+def init():
+    # requires: 
+    #
+    # effects: 
+    # 1. Processes command line options
+    # 2. Initializes local DBMS parameters
+    # 3. Initializes global file descriptors/file names
+    #
+    # returns:
+    #
+
+	global objectKey, createdBy
+
+	try:
+		optlist, args = getopt.getopt(sys.argv[1:], 'S:D:U:P:K:B:')
+	except:
+		showUsage()
+
+	server = db.get_sqlServer()
+	database = db.get_sqlDatabase()
+	user = None
+	password = None
+
+	for opt in optlist:
+		if opt[0] == '-S':
+			server = opt[1]
+		elif opt[0] == '-D':
+			database = opt[1]
+		elif opt[0] == '-U':
+			user = opt[1]
+		elif opt[0] == '-P':
+			password = string.strip(open(opt[1], 'r').readline())
+		elif opt[0] == '-K':
+			objectKey = string.atoi(opt[1])
+		elif opt[0] == '-B':
+			createdBy = re.sub('"', '', opt[1])
 		else:
-			lowerProv = ''
+			showUsage()
 
-		if providerMap.has_key(lowerProv):
-			cmds.append (INSERT_ACC % (
-				key, id, providerMap[lowerProv]))
-		else:
-			sys.stderr.write (
-				'Unknown prefix %s, did not add %s for %d\n' \
-					% (provider, id, key) )
+	if server is None or \
+   	   database is None or \
+   	   user is None or \
+   	   password is None or \
+   	   (objectKey is None and createdBy is None):
+		showUsage()
 
-	# reformat 'toDelete' to be a dictionary where each key (an evidence
-	# key) refers to a list of all IDs we should delete for it, to
-	# collapse it down into as few delete statements as possible
+	db.set_sqlLogin(user, password, server, database)
+    	db.useOneConnection(1)
 
-	byKey = {}
-	for (key, id) in toDelete:
-		if byKey.has_key(key):
-			byKey[key].append (id)
-		else:
-			byKey[key] = [id]
+        # Log all SQL if runnning checker, loading all data or
+	# running the load by a specific user
+	if objectKey <= 0 or createdBy is not None:
+        	db.set_sqlLogFunction(db.sqlLogAll)
 
-	# assumes small (less than 250 or so) number of ids per evidence key;
-	# this is a valid assumption because of the size of the varchar field
-	# VOC_Evidence.inferredFrom:
+def preCache():
+	#
+	# select the existing cache data into a temp table
+	#
+	# if objectKey >= 0
+	# 	delete the existing cache data
+	# 
+	# elif objectKey == -1:
+	# 	put existing cache-ed data into a dictionay
+	#
 
-	for (key, idList) in byKey.items():
-		cmds.append (DELETE_ACC % (key, EVIDENCE_MGITYPE,
-			'","'.join (idList) ) )
+	global cacheIF
 
-	if cmds:
-		# to not overwhelm sybase, pass along the commands in small
-		# batches (suspicion that passing along a hundred thousand
-		# might be problematic, but not proven)
+	#
+	# select existing cache data
 
-		step = 100	# how many commands to process per batch
-		i = 0
+	cmd = 'select a._Accession_key, a.accID, a._Object_key ' + \
+		'into #toCheck ' + \
+		'from ACC_Accession a, VOC_Annot v, VOC_Evidence e, MGI_User u ' + \
+		'where a._MGIType_key = 25 ' + \
+		'and v._AnnotType_key = 1000 ' + \
+		'and v._Annot_key = e._Annot_key ' + \
+		'and a._Object_key = e._AnnotEvidence_key ' + \
+		'and e._CreatedBy_key = u._User_key '
+        
+	# select by object or created by
 
-		while cmds:
-			# skip our sql() wrapper and use db.sql directly
-			# so we can have more granular control over errors
+	if objectKey > 0:
+		cmd = cmd + ' and v._Object_key = %s' % (objectKey)
+
+	elif createdBy is not None:
+		cmd = cmd + ' and u.login like "%s"' % (createdBy)
+
+	db.sql(cmd, None)
+	db.sql('create index idx1 on #toCheck(_Accession_key)', None)
+
+	# delete existing cache data
+
+	if objectKey >= 0 or createdBy is not None:
+		db.sql('delete ACC_Accession from #toCheck d, ACC_Accession a ' + \
+			'where d._Accession_key = a._Accession_key', None)
+
+	# copy existing cache table accession keys
+
+	elif objectKey == -1:
+		results = db.sql('select * from #toCheck', 'auto')
+		for r in results:
+			key = r['_Object_key']
+			value = r['accID']
+			if not cacheIF.has_key(key):
+			   cacheIF[key] = []
+		        cacheIF[key].append(value)
+
+def processCache():
+	#
+	# process the GO inferred-from data from the vocabulary table
+	#
+	# add the data to the cache table (accession table)
+	# OR
+	# write out the checking errors
+	#
+
+	# retrieve GO data in VOC_Evidence table
+
+        cmd = 'select e._AnnotEvidence_key, e.inferredFrom, m.symbol, goID = ta.accID ' + \
+		'from VOC_Annot a, VOC_Evidence e, MRK_Marker m, ACC_Accession ta, MGI_User u ' + \
+		'where a._AnnotType_key = 1000 ' + \
+		'and a._Annot_key = e._Annot_key ' + \
+		'and e.inferredFrom is not null ' + \
+		'and a._Object_key = m._Marker_key ' + \
+		'and a._Term_key = ta._Object_key ' + \
+		'and ta._LogicalDB_key = 31 ' + \
+		'and ta._MGIType_key = 13 ' + \
+		'and ta.preferred = 1 ' + \
+		'and e._CreatedBy_key = u._User_key '
+
+	# select data by specific marker or by created by
+
+	if objectKey > 0:
+		cmd = cmd + ' and a._Object_key = %s' % (objectKey)
+
+	elif createdBy is not None:
+		cmd = cmd + ' and u.login like "%s"' % (createdBy)
+
+	results = db.sql(cmd, 'auto')
+	eiErrors = ''
+
+	for r in results:
+
+		key = r['_AnnotEvidence_key']
+		inferredFrom = r['inferredFrom']
+		symbol = r['symbol']
+		goID = r['goID']
+
+		#
+		# the accession ids are separated by '|' or ',' or none
+		# split them up into a list
+		#
+
+                if inferredFrom.find('|') >= 0:
+                	allAccIDs = inferredFrom.split('|')
+                elif inferredFrom.find(',') >= 0:
+                	allAccIDs = inferredFrom.split(',')
+                else:
+                	allAccIDs = [inferredFrom]
+
+		#
+		# for each accession id in the list of this marker...
+		#
+
+		for accID in allAccIDs:
 
 			try:
-				db.sql (cmds[:step], 'auto')
+				if accID == '':
+				    continue
+
+				# MGI and GO ids (logicalDB = 1) are stored
+				# with the MGI: and GO: as part of the accession id
+				# for all others, we do not store the ##: part
+
+		    		fullAccID = accID
+		    		tokens = accID.split(':')
+		    		provider = tokens[0].lower()
+		    		accIDPart = tokens[1]
+
+		        	if provider != 'mgi' and provider != 'go':
+					accID = accIDPart
+
+				# for EMBL ids, check if accession id is valid
+
+                        	if provider == 'embl':
+                        		embl_result1 = embl_re1.match(accID)
+                        		embl_result2 = embl_re2.match(accID)
+					if embl_result1 is None and embl_result2 is None:
+						eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
+						continue
+
+				# load the id into the accession cache
+				# for now, we will do this for a bulk load as well
+				#if objectKey = 0 or createdBy is not None:
+
+				if objectKey >= 0 or createdBy is not None:
+					# by marker
+					addIt = execSQL % (key, accID, providerMap[provider])
+					db.sql(addIt, None)
+
+				# will do this only when we implement a bcp strategy
+				#elif objectKey == 0:
+
+				# else, run the checker
+
+				else:
+					if key in cacheIF:
+						if accID not in cacheIF[key]:
+							eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
+					else:
+						eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
+
 			except:
-				# batch failed; try individually to do as
-				# many as possible, and report errant ones
+				eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
 
-				for cmd in cmds[:step]:
-					try:
-						db.sql (cmd, 'auto')
-					except:
-						exc_val = sys.exc_info()[1]
-						message ('Error: Failed command: %s'\
-							% cmd)
-						sys.stderr.write (
-							'Cause:\n%s\n' % \
-							exc_val)
+	if eiErrors != '':
+		# the EI will pick up the standard output via the ei/dsrc/PythonLib.d/PythonInferredFromCache code
+		print '\nThe following errors exist in the inferred-from text:\n\n' + eiErrors
 
-			cmds = cmds[step:]
-			i = i + 1
-			if (i % 5) == 0:
-				message ('%d IDs left to go' % len(cmds))
+#
+#
+# Main Routine
+#
 
-		message ('finished processing IDs')
-	else:
-		message ('no IDs to process')
-	return
+init()
+preCache()
+processCache()
+exit(0)
 
-def main():
-	processCommandLine()
-	loadCaches()
-	toDelete, toAdd = diff ()
-	synchronize (toDelete, toAdd)
-	return
-
-if __name__ == '__main__':
-	main()
