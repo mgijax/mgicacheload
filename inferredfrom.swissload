@@ -1,0 +1,23 @@
+#!/bin/csh
+
+#
+# Usage:  inferredfrom.swissload
+#
+# History
+#
+# 06/17/2008	lec
+#	- TR 9057; changes to original inferredFrom
+#	this is a script for running the swissprot load
+#
+
+cd `dirname $0` && source ./Configuration
+
+setenv LOG	${MGICACHELOGDIR}/`basename $0`.log
+rm -rf $LOG
+touch $LOG
+
+date | tee -a ${LOG}
+
+./inferredfrom.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -B"swissload" |& tee -a ${LOG}
+
+date | tee -a ${LOG}
