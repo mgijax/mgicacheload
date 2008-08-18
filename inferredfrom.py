@@ -15,6 +15,9 @@
 #		
 # History
 #
+# 08/18/2008 - lec
+#	- TR9217; add Pfam
+#
 # 06/11/2008 - lec
 #	- TR9057/fixes to original code
 #
@@ -48,6 +51,7 @@ providerMap = {
 	'interpro' : 28,
 	'ncbi' : 27,
 	'pir' : 78,
+	'pfam' : 119,
 	'protein_id' : 13,
 	'refseq' : 27,
 	'rgd' : 4,
