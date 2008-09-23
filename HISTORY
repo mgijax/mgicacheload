@@ -1,3 +1,9 @@
+TAG: mgicacheload-tr9267-1
+DATE: 09/23/2008
+STAFF: jsb
+CHANGES:
+1) added voccounts.csh and vocmarker.csh scripts to populate new tables
+
 TAG: mgicacheload-tr9267-BP
 DATE: 09/18/2008
 STAFF: jsb
