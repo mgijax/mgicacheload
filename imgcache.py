@@ -250,6 +250,12 @@ def process(objectKey):
 		imageKey = r['_Image_key']
 		sortOrder = r['sortOrder']
 
+	        # If there is no pixel ID for the thumbnail, do not create
+	        # a record for the cache table.
+
+	        if not pixthumbnail.has_key(imageKey):
+	            continue
+
 		# if we have a new marker, or if we are just beginning the
 		# section of pheno images, restart our numbering at 1
 
@@ -297,6 +303,12 @@ def process(objectKey):
 		markerKey = r['_Object_key']
 		imageKey = r['_Image_key']
 		sortOrder = r['sortOrder']
+
+	        # If there is no pixel ID for the thumbnail, do not create
+	        # a record for the cache table.
+
+	        if not pixthumbnail.has_key(imageKey):
+	            continue
 
 		# if we have a new marker, or if we are just beginning the
 		# section of pheno images, restart our numbering at 1
