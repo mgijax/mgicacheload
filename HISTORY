@@ -1,3 +1,10 @@
+TAG: mgicacheload-4-2-1-0
+DATE: 04/22/2009
+STAFF: dbm
+CHANGES:
+1) Change imgcache.py so it skips the creation of an image cache record if
+   there is no thumbnail image.
+
 TAG: mgicacheload-tr7493-BP
 DATE: 12/11/2008
 STAFF: jsb
