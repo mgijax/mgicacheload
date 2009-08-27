@@ -1,3 +1,9 @@
+TAG: mgicacheload-4-3-0-1
+DATE: 08/27/2009
+STAFF: lec
+CHANGES:
+1) TR9769; inferredFrom.py; add ChEBS, UniProt
+
 TAG: mgicacheload-4-2-1-0
 DATE: 04/22/2009
 STAFF: dbm

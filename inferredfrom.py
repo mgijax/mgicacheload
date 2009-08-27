@@ -15,6 +15,10 @@
 #		
 # History
 #
+# 08/27/2009 - lec
+#	- TR9769/add logical DB "ChEBI"
+#	- added 'uniprot' (same as 'uniprotkb')
+#
 # 08/18/2008 - lec
 #	- TR9217; add Pfam
 #
@@ -57,8 +61,9 @@ providerMap = {
 	'rgd' : 4,
 	'sp_kw' : 111,
 	'sgd' : 114,
-	'uniprot' : 13,
 	'uniprotkb' : 13,
+	'uniprot' : 13,
+	'chebi' : 127,
 	}
 
 #
