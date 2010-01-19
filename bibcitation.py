@@ -18,6 +18,9 @@
 #
 # History
 #
+# 01/19/2010	lec
+#	- TR 10037/remove quotes from citations
+#
 # 10/19/2006	lec
 #	- TR 6812
 #
@@ -190,6 +193,10 @@ def process(objectKey):
                 else:
 		    pubmedID = 'null'
 
+		# TR 10037/remove quotes from citations
+		citation = string.replace(r['citation'], '"', '')
+		short_citation = string.replace(r['short_citation'], '"', '')
+
 	        db.sql(insertSQL % ( \
 		    mgi_utils.prvalue(key), \
 		    mgi_utils.prvalue(jnum[key]['numericPart']), \
@@ -198,8 +205,8 @@ def process(objectKey):
 		    mgi_utils.prvalue(pubmedID), \
 	            mgi_utils.prvalue(r['reviewStatus']), \
 		    mgi_utils.prvalue(r['journal']), \
-		    mgi_utils.prvalue(r['citation']), \
-		    mgi_utils.prvalue(r['short_citation']),
+		    mgi_utils.prvalue(citation), \
+		    mgi_utils.prvalue(short_citation),
 		    mgi_utils.prvalue(r['isReviewArticle']),
 		    mgi_utils.prvalue(isReviewArticle)), None)
 
