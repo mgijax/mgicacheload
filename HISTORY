@@ -1,3 +1,9 @@
+TAG: mgicacheload-4-3-5-0
+DATE: 05/10/2010
+STAFF: mhall
+CHANGES:
+1) TR 9983; Added the vocalleles.csh cache refresh.
+
 TAG: mgicacheload-4-3-3-2
 DATE: 04/13/2010
 STAFF: lec
