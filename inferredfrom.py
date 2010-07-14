@@ -15,6 +15,9 @@
 #		
 # History
 #
+# 07/14/2010 - lec
+#	- TR9962/add PANTHER/PTHR
+#
 # 08/27/2009 - lec
 #	- TR9769/add logical DB "ChEBI"
 #	- added 'uniprot' (same as 'uniprotkb')
@@ -64,6 +67,7 @@ providerMap = {
 	'uniprotkb' : 13,
 	'uniprot' : 13,
 	'chebi' : 127,
+	'panther' : 147,
 	}
 
 #

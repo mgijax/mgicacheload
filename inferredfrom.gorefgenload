@@ -1,0 +1,22 @@
+#!/bin/csh
+
+#
+# Usage:  inferredfrom.gorefgen
+#
+# History
+#
+# 07/14/2010	lec
+#	- TR 9962; script for running the GO RefGen load
+#
+
+cd `dirname $0` && source ./Configuration
+
+setenv LOG	${MGICACHELOGDIR}/`basename $0`.log
+rm -rf $LOG
+touch $LOG
+
+date | tee -a ${LOG}
+
+./inferredfrom.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -B"RefGenome" |& tee -a ${LOG}
+
+date | tee -a ${LOG}
