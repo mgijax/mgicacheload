@@ -1,0 +1,22 @@
+#!/bin/csh
+
+#
+# Usage:  inferredfrom.goahumanload
+#
+# History
+#
+# 10/06/2010	lec
+#	- TR 10393/added GOA/Human load
+#
+
+cd `dirname $0` && source ./Configuration
+
+setenv LOG	${MGICACHELOGDIR}/`basename $0`.log
+rm -rf $LOG
+touch $LOG
+
+date | tee -a ${LOG}
+
+./inferredfrom.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -B"UniProtKB" |& tee -a ${LOG}
+
+date | tee -a ${LOG}
