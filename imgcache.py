@@ -22,6 +22,9 @@
 #		
 # History
 #
+# 11/24/2010	lec
+#	- TR 10033/image class
+#
 # 05/27/2008 - lec
 #	- fix insertSQL for assay type
 #
@@ -71,11 +74,11 @@ def getRefKey(jNumber):
 	#
 	#  Get the reference key for the J-Number.
 	#
-	results = db.sql('select _Object_key from ACC_Accession ' + \
-		'where accID = "%s" ' % (jNumber) + \
-		'and _MGIType_key = 1 ' + \
-		'and _LogicalDB_key = 1 ' + \
-		'and preferred = 1', 'auto')
+	results = db.sql('''select _Object_key from ACC_Accession 
+		where accID = "%s" 
+		and _MGIType_key = 1 
+		and _LogicalDB_key = 1 
+		and preferred = 1''' % (jNumber), 'auto')
 
 	if len(results) == 0:
 	    sys.stderr.write('J-Number "' + jNumber + '" does not exist.\n')
@@ -88,21 +91,25 @@ def getRefKey(jNumber):
 def process(objectKey):
 
 	#
-	# retrieve Assay (GXD) images that have thumbnails and are in pixel DB
+	# retrieve images that have thumbnails and are in pixel DB
+	# only include Expression and Phenotype images
 	#
 
-        cmd = 'select i._Image_key, i._MGIType_key, i._Refs_key, i._ThumbnailImage_key, ' + \
-		'i.figureLabel, ip._ImagePane_key, ip.paneLabel, r.year, a.numericPart ' + \
-		'into #images ' + \
-		'from IMG_Image i, BIB_Refs r, IMG_ImagePane ip, ACC_Accession a ' + \
-		'where i._MGIType_key in (8, 11) ' + \
-		'and i._ThumbnailImage_key is not null ' + \
-		'and i.xdim is not null ' + \
-		'and i._Refs_key = r._Refs_key ' + \
-		'and i._Image_key = ip._Image_key ' + \
-		'and r._Refs_key = a._Object_key ' + \
-		'and a._MGIType_key = 1 ' + \
-		'and a.prefixPart = "J:"'
+        cmd = '''select i._Image_key, i._MGIType_key, i._ImageClass_key, 
+		 i._Refs_key, i._ThumbnailImage_key, 
+		 i.figureLabel, ip._ImagePane_key, ip.paneLabel, r.year, a.numericPart 
+		into #images 
+		from IMG_Image i, BIB_Refs r, IMG_ImagePane ip, ACC_Accession a, VOC_Term t
+		where i._MGIType_key in (8, 11) 
+		and i._ImageClass_key = t._Term_key
+		and t.term in ('Expression', 'Phenotypes')
+		and i._ThumbnailImage_key is not null 
+		and i.xdim is not null 
+		and i._Refs_key = r._Refs_key 
+		and i._Image_key = ip._Image_key 
+		and r._Refs_key = a._Object_key 
+		and a._MGIType_key = 1 
+		and a.prefixPart = "J:"'''
 
 	if objectKey > 0:
 	    cmd = cmd + ' and i._Refs_key = %s' % (objectKey)
@@ -127,23 +134,24 @@ def process(objectKey):
 
 	# add GXD gel images
 
-	db.sql('select distinct i.*, _ObjectMGIType_key = 2, _Object_key = a._Marker_key, ' + \
-		'a._AssayType_key, t.assayType, sortOrder = 2 ' + \
-		'into #imageassoc ' + \
-		'from #images i, GXD_Assay a, GXD_AssayType t ' + \
-		'where i._ImagePane_key = a._ImagePane_key ' + \
-		'and a._AssayType_key = t._AssayType_key', None)
+	db.sql('''select distinct i.*, _ObjectMGIType_key = 2, _Object_key = a._Marker_key, 
+		a._AssayType_key, t.assayType, sortOrder = 2 
+		into #imageassoc 
+		from #images i, GXD_Assay a, GXD_AssayType t 
+		where i._ImagePane_key = a._ImagePane_key 
+		and a._AssayType_key = t._AssayType_key''', None)
 
 	# add GXD in situ images
 
-	db.sql('insert into #imageassoc ' + \
-		'select distinct i.*, 2, a._Marker_key, a._AssayType_key, t.assayType, sortOrder = 2 ' + \
-		'from #images i, GXD_Assay a, GXD_AssayType t, GXD_Specimen s, GXD_InSituResult r, GXD_InSituResultImage g ' + \
-		'where i._ImagePane_key = g._ImagePane_key ' + \
-		'and g._Result_key = r._Result_key ' + \
-		'and r._Specimen_key = s._Specimen_key ' + \
-		'and s._Assay_key = a._Assay_key ' + \
-		'and a._AssayType_key = t._AssayType_key', None)
+	db.sql('''insert into #imageassoc 
+		select distinct i.*, 2, a._Marker_key, a._AssayType_key, t.assayType, sortOrder = 2 
+		from #images i, GXD_Assay a, GXD_AssayType t, 
+		     GXD_Specimen s, GXD_InSituResult r, GXD_InSituResultImage g 
+		where i._ImagePane_key = g._ImagePane_key 
+		and g._Result_key = r._Result_key 
+		and r._Specimen_key = s._Specimen_key 
+		and s._Assay_key = a._Assay_key 
+		and a._AssayType_key = t._AssayType_key''', None)
 
 	# must allow null assay type info to accommodate pheno images
 
@@ -153,19 +161,15 @@ def process(objectKey):
 	# add pheno images
 
 	db.sql ('''insert into #imageassoc
-		select distinct i.*, 2, aa._Marker_key, null, null, 5
-		from #images i,
-			IMG_ImagePane_Assoc ipa,
-			ALL_Allele aa
+		select distinct i.*, 2, aa._Marker_key, null, null, sortOrder = 5
+		from #images i, IMG_ImagePane_Assoc ipa, ALL_Allele aa
 		where i._ImagePane_key = ipa._ImagePane_key
-			and ipa._Object_key = aa._Allele_key
-			and ipa._MGIType_key = 11	-- allele''', None)
+		and ipa._Object_key = aa._Allele_key
+		and ipa._MGIType_key = 11	-- allele''', None)
 
 	# prioritize pheno images from J:98862, leave others as sort order 5
 
-	db.sql ('''update #imageassoc
-		set sortOrder = 4
-		where sortOrder = 5 and numericPart = 98862''', None)
+	db.sql ('update #imageassoc set sortOrder = 4 where sortOrder = 5 and numericPart = 98862', None)
 
 	# add indexes for performance
 
@@ -176,25 +180,28 @@ def process(objectKey):
 	db.sql('create index idx5 on #imageassoc(_Object_key, sortOrder, year, figureLabel, _Image_key)', None)
 
 	# update sort order for those with insitu assays only (by marker)
-	db.sql('update #imageassoc set sortOrder = 1 from #imageassoc a1 where a1._AssayType_key in (1,6,9) ' + \
-		'and not exists (select 1 from #imageassoc a2 where a1._Image_key = a2._Image_key ' + \
-		'and a1._Object_key = a2._Object_key ' + \
-		'and a2._AssayType_key in (2,3,4,5,8))', None)
+	db.sql('''update #imageassoc set sortOrder = 1 
+		from #imageassoc a1 
+		where a1._AssayType_key in (1,6,9) 
+		and not exists (select 1 from #imageassoc a2 where a1._Image_key = a2._Image_key
+		and a1._Object_key = a2._Object_key
+		and a2._AssayType_key in (2,3,4,5,8))''', None)
 
 	# update sort order for those with gel assays only (by marker)
-	db.sql('update #imageassoc set sortOrder = 3 from #imageassoc a1 where a1._AssayType_key in (2,3,4,5,8) ' + \
-		'and not exists (select 1 from #imageassoc a2 where a1._Image_key = a2._Image_key ' + \
-		'and a1._Object_key = a2._Object_key ' + \
-		'and a2._AssayType_key in (1,6,9))', None)
+	db.sql('''update #imageassoc set sortOrder = 3 
+		from #imageassoc a1 where a1._AssayType_key in (2,3,4,5,8) 
+		and not exists (select 1 from #imageassoc a2 where a1._Image_key = a2._Image_key 
+		and a1._Object_key = a2._Object_key 
+		and a2._AssayType_key in (1,6,9))''', None)
 
 	# get pixeldb ids for full size images
 
-        results = db.sql('select i._Image_key, a.numericPart ' + \
-		'from #imageassoc i, ACC_Accession a ' + \
-		'where i._Image_key = a._Object_key ' + \
-		'and a._MGIType_key = 9 ' + \
-		'and a._LogicalDB_key = 19 ' + \
-		'and a.preferred = 1 ', 'auto')
+        results = db.sql('''select i._Image_key, a.numericPart 
+		from #imageassoc i, ACC_Accession a 
+		where i._Image_key = a._Object_key 
+		and a._MGIType_key = 9 
+		and a._LogicalDB_key = 19 
+		and a.preferred = 1 ''', 'auto')
 
 	pixfullsize = {}
         for r in results:
@@ -202,12 +209,12 @@ def process(objectKey):
 
 	# get pixeldb ids for thumbnail images
 
-        results = db.sql('select i._Image_key, a.numericPart ' + \
-		'from #imageassoc i, ACC_Accession a ' + \
-		'where i._ThumbnailImage_key = a._Object_key ' + \
-		'and a._MGIType_key = 9 ' + \
-		'and a._LogicalDB_key = 19 ' + \
-		'and a.preferred = 1 ', 'auto')
+        results = db.sql('''select i._Image_key, a.numericPart 
+		from #imageassoc i, ACC_Accession a 
+		where i._ThumbnailImage_key = a._Object_key 
+		and a._MGIType_key = 9 
+		and a._LogicalDB_key = 19 
+		and a.preferred = 1 ''', 'auto')
 
 	pixthumbnail = {}
         for r in results:
@@ -276,6 +283,7 @@ def process(objectKey):
 			     mgi_utils.prvalue(r['_MGIType_key']) + COLDL + \
 			     mgi_utils.prvalue(markerKey) + COLDL + \
 			     mgi_utils.prvalue(r['_ObjectMGIType_key']) + COLDL + \
+			     mgi_utils.prvalue(r['_ImageClass_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_Refs_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_AssayType_key']) + COLDL + \
 			     mgi_utils.prvalue(pixfullsize[imageKey]) + COLDL + \
@@ -294,9 +302,7 @@ def process(objectKey):
 
 	    # delete existing cache table entries
 
-	    db.sql('delete ' + \
-		'from %s ' % (table) + \
-		'where _Refs_key = %s' % (objectKey), None)
+	    db.sql('delete from %s where _Refs_key = %s' % (table, objectKey), None)
 
 	    for r in results:
 
@@ -350,6 +356,7 @@ def process(objectKey):
 		    mgi_utils.prvalue(r['_MGIType_key']), \
 		    mgi_utils.prvalue(markerKey), \
 		    mgi_utils.prvalue(r['_ObjectMGIType_key']), \
+		    mgi_utils.prvalue(r['_ImageClass_key']) + \
 		    mgi_utils.prvalue(r['_Refs_key']), \
 		    mgi_utils.prvalue(assayTypeKey), \
 		    mgi_utils.prvalue(pixfullsize[imageKey]), \
@@ -370,8 +377,8 @@ try:
 except:
 	showUsage()
 
-server = db.get_sqlServer()
-database = db.get_sqlDatabase()
+server = None
+database = None
 user = None
 password = None
 jNumber = None
@@ -395,7 +402,9 @@ for opt in optlist:
 	else:
 		showUsage()
 
-if user is None or \
+if server is None or \
+   database is None or \
+   user is None or \
    password is None or \
    (jNumber is None and objectKey is None):
 	showUsage()
