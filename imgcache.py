@@ -50,7 +50,7 @@ try:
 except:
     table = 'IMG_Cache'
 
-insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s",%s)'
+insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s",%s)'
 
 def showUsage():
 	'''
