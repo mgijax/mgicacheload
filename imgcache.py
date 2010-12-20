@@ -356,7 +356,7 @@ def process(objectKey):
 		    mgi_utils.prvalue(r['_MGIType_key']), \
 		    mgi_utils.prvalue(markerKey), \
 		    mgi_utils.prvalue(r['_ObjectMGIType_key']), \
-		    mgi_utils.prvalue(r['_ImageClass_key']) + \
+		    mgi_utils.prvalue(r['_ImageClass_key']), \
 		    mgi_utils.prvalue(r['_Refs_key']), \
 		    mgi_utils.prvalue(assayTypeKey), \
 		    mgi_utils.prvalue(pixfullsize[imageKey]), \
