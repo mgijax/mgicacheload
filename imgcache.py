@@ -99,7 +99,7 @@ def process(objectKey):
     
         results = db.sql('select cacheKey = max(_Cache_key) from %s' % (table), 'auto')
         for r in results:
-	    nextMaxKey = r['cacheKey']
+	    nextMaxKey = r['cacheKey'] + 1
 
         if nextMaxKey == None:
             nextMaxKey = 1
