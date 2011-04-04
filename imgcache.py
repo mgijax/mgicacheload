@@ -99,10 +99,10 @@ def process(objectKey):
     
         results = db.sql('select cacheKey = max(_Cache_key) from %s' % (table), 'auto')
         for r in results:
-	    nextMaxKey = r['cacheKey'] + 1
+	    nextMaxKey = r['cacheKey']
 
         if nextMaxKey == None:
-            nextMaxKey = 1
+            nextMaxKey = 0
 
 	#
 	# retrieve images that have thumbnails and are in pixel DB
@@ -291,6 +291,8 @@ def process(objectKey):
 		prevImageKey = imageKey
 		prevSortOrder = sortOrder
 
+		nextMaxKey = nextMaxKey + 1
+
 	        cacheBCP.write(str(nextMaxKey) + COLDL +
 			     mgi_utils.prvalue(imageKey) + COLDL + \
 			     mgi_utils.prvalue(r['_ThumbnailImage_key']) + COLDL + \
@@ -308,7 +310,6 @@ def process(objectKey):
 			     mgi_utils.prvalue(r['figureLabel']) + COLDL + \
 			     mgi_utils.prvalue(r['paneLabel']) + LINEDL)
 	        cacheBCP.flush()
-		nextMaxKey = nextMaxKey + 1
 
 	    cacheBCP.close()
 
@@ -365,6 +366,8 @@ def process(objectKey):
 
 		# do the insertion one row at a time
 
+	        nextMaxKey = nextMaxKey + 1
+
 	        db.sql(insertSQL % (str(nextMaxKey), \
 		    mgi_utils.prvalue(imageKey), \
 		    mgi_utils.prvalue(r['_ThumbnailImage_key']), \
@@ -381,8 +384,6 @@ def process(objectKey):
 		    mgi_utils.prvalue(assayType),\
 		    mgi_utils.prvalue(r['figureLabel']), \
 		    mgi_utils.prvalue(paneLabel)), None)
-
-	        nextMaxKey = nextMaxKey + 1
 
 #
 # Main Routine
