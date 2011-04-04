@@ -15,6 +15,9 @@
 #		
 # History
 #
+# 03/29/2011	lec
+#	- TR10652/NCBI: to be replaced by RefSeq:
+#
 # 07/14/2010 - lec
 #	- TR9962/add PANTHER/PTHR
 #
@@ -49,6 +52,7 @@ eiErrorStatus = '%s     %s     %s\n'
 
 # maps provider prefix to logical database key
 # using lowercase
+# ncbi = refseq = 27: both prefixes can be used
 providerMap = {
 	'mgi' : 1,
 	'go' : 1,
@@ -56,10 +60,10 @@ providerMap = {
 	'ec' : 8,
 	'genedb_spombe' : 115,
 	'interpro' : 28,
-	'ncbi' : 27,
 	'pir' : 78,
 	'pfam' : 119,
 	'protein_id' : 13,
+	'ncbi' : 27,
 	'refseq' : 27,
 	'rgd' : 4,
 	'sp_kw' : 111,

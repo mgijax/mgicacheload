@@ -22,6 +22,9 @@
 #		
 # History
 #
+# 04/04/2011	lec
+#	- TR 10658; added _Cache_key
+#
 # 11/24/2010	lec
 #	- TR 10033/image class
 #
