@@ -97,12 +97,16 @@ def process(objectKey):
         # next available primary key
         #
     
-        results = db.sql('select cacheKey = max(_Cache_key) from %s' % (table), 'auto')
-        for r in results:
-	    nextMaxKey = r['cacheKey']
-
-        if nextMaxKey == None:
+	if objectKey == 0:
             nextMaxKey = 0
+        else:
+	    results = db.sql('select cacheKey = max(_Cache_key) from %s' % (table), 'auto')
+             
+	    for r in results:
+		nextMaxKey = r['cacheKey']
+
+	    if nextMaxKey == None:
+		nextMaxKey = 0
 
 	#
 	# retrieve images that have thumbnails and are in pixel DB
