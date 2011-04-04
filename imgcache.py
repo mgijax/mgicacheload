@@ -50,7 +50,7 @@ try:
 except:
     table = 'IMG_Cache'
 
-insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s",%s)'
+insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s",%s)'
 
 def showUsage():
 	'''
@@ -89,6 +89,17 @@ def getRefKey(jNumber):
 
  
 def process(objectKey):
+
+        #
+        # next available primary key
+        #
+    
+        results = db.sql('select cacheKey = max(_Cache_key) from %s' % (table), 'auto')
+        for r in results:
+	    nextMaxKey = r['cacheKey']
+
+        if nextMaxKey == None:
+            nextMaxKey = 1
 
 	#
 	# retrieve images that have thumbnails and are in pixel DB
@@ -277,7 +288,8 @@ def process(objectKey):
 		prevImageKey = imageKey
 		prevSortOrder = sortOrder
 
-	        cacheBCP.write(mgi_utils.prvalue(imageKey) + COLDL + \
+	        cacheBCP.write(str(nextMaxKey) + COLDL +
+			     mgi_utils.prvalue(imageKey) + COLDL + \
 			     mgi_utils.prvalue(r['_ThumbnailImage_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_ImagePane_key']) + COLDL + \
 			     mgi_utils.prvalue(r['_MGIType_key']) + COLDL + \
@@ -293,6 +305,7 @@ def process(objectKey):
 			     mgi_utils.prvalue(r['figureLabel']) + COLDL + \
 			     mgi_utils.prvalue(r['paneLabel']) + LINEDL)
 	        cacheBCP.flush()
+		nextMaxKey = nextMaxKey + 1
 
 	    cacheBCP.close()
 
@@ -349,7 +362,7 @@ def process(objectKey):
 
 		# do the insertion one row at a time
 
-	        db.sql(insertSQL % ( \
+	        db.sql(insertSQL % (str(nextMaxKey), \
 		    mgi_utils.prvalue(imageKey), \
 		    mgi_utils.prvalue(r['_ThumbnailImage_key']), \
 		    mgi_utils.prvalue(r['_ImagePane_key']), \
@@ -365,6 +378,8 @@ def process(objectKey):
 		    mgi_utils.prvalue(assayType),\
 		    mgi_utils.prvalue(r['figureLabel']), \
 		    mgi_utils.prvalue(paneLabel)), None)
+
+	        nextMaxKey = nextMaxKey + 1
 
 #
 # Main Routine
