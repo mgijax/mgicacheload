@@ -15,6 +15,9 @@
 #		
 # History
 #
+# 04/25/2011	lec
+#	- TR10681/add NCBI_Gene
+#
 # 03/29/2011	lec
 #	- TR10652/NCBI: to be replaced by RefSeq:
 #
@@ -72,6 +75,7 @@ providerMap = {
 	'uniprot' : 13,
 	'chebi' : 127,
 	'panther' : 147,
+	'ncbi_gene' : 160,
 	}
 
 #
