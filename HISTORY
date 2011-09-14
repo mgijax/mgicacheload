@@ -1,3 +1,9 @@
+TAG: mgicacheload-4-4-1-8
+DATE: 09/14/2011
+STAFF: lec
+CHANGES:
+1) TR10852/exclude allels where _Marker_key is null
+
 TAG: mgicacheload-4-4-1-7
 DATE: 04/25/2011
 STAFF: lec

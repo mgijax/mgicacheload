@@ -8,6 +8,8 @@
 # 	Assay (GXD) and phenotype images that have thumbnails and are in
 #	Pixel DB
 #
+#	exclude Phenotype Images where the Allele's _Marker_key is null
+#
 # Usage:
 #	imgcache.py -Sserver -Ddatabase -Uuser
 #                   { -Ppasswordfile || -Wpassword }
@@ -21,6 +23,9 @@
 #	if objectkey == -2, then retrieve images that have a modification date = today
 #		
 # History
+#
+# 09/14/2011	lec
+#	- TR 10852; do not select Alleles where _Marker_key is null
 #
 # 04/04/2011	lec
 #	- TR 10658; added _Cache_key
@@ -183,7 +188,9 @@ def process(objectKey):
 		from #images i, IMG_ImagePane_Assoc ipa, ALL_Allele aa
 		where i._ImagePane_key = ipa._ImagePane_key
 		and ipa._Object_key = aa._Allele_key
-		and ipa._MGIType_key = 11	-- allele''', None)
+		and ipa._MGIType_key = 11	-- allele
+		and aa._Marker_key is not null
+		''', None)
 
 	# prioritize pheno images from J:98862, leave others as sort order 5
 
