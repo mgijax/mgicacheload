@@ -1,3 +1,9 @@
+TAG: mgicacheload-4-4-2-1
+DATE: 11/22/2011
+STAFF: lec
+CHANGES:
+1) add -f to /bin/csh calls
+
 TAG: mgicacheload-4-4-1-8
 DATE: 09/14/2011
 STAFF: lec

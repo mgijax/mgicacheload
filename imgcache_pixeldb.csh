@@ -1,4 +1,4 @@
-#!/bin/csh
+#!/bin/csh -f
 
 #
 # This is a wrapper script that is called via the runCommand from pixel DB
