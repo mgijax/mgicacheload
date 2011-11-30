@@ -15,6 +15,9 @@
 #		
 # History
 #
+# 11/29/2011	lec
+#	- TR10919/replace 'genedb_spombe' witih 'pombase'
+#
 # 04/25/2011	lec
 #	- TR10681/add NCBI_Gene
 #
@@ -61,7 +64,7 @@ providerMap = {
 	'go' : 1,
 	'embl' : 9,
 	'ec' : 8,
-	'genedb_spombe' : 115,
+	'pombase' : 115,
 	'interpro' : 28,
 	'pir' : 78,
 	'pfam' : 119,
