@@ -15,6 +15,10 @@
 #		
 # History
 #
+# 03/01/2012	lec
+#	- TR 10950
+# 	'sp_kw' changed to 'uniprotkb-kw' : 111
+#
 # 11/29/2011	lec
 #	- TR10919/replace 'genedb_spombe' witih 'pombase'
 #
@@ -72,7 +76,7 @@ providerMap = {
 	'ncbi' : 27,
 	'refseq' : 27,
 	'rgd' : 4,
-	'sp_kw' : 111,
+	'uniprotkb-kw' : 111,
 	'sgd' : 114,
 	'uniprotkb' : 13,
 	'uniprot' : 13,
