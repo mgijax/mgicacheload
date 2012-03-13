@@ -77,6 +77,7 @@ providerMap = {
 	'refseq' : 27,
 	'rgd' : 4,
 	'uniprotkb-kw' : 111,
+	'sp_kw' : 111,
 	'sgd' : 114,
 	'uniprotkb' : 13,
 	'uniprot' : 13,

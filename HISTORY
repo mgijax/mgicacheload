@@ -1,8 +1,10 @@
+TAG: mgicacheload-4-4-2-4
 TAG: mgicacheload-4-4-2-3
 DATE: 03/05/2012
 STAFF: lec
 CHANGES:
 1) TR10950/'sp_kw' changed to 'uniprotkb-kw' : 111
+2) allow 'sp_kw' until cut-over on the weekend
 
 TAG: mgicacheload-4-4-2-2
 DATE: 11/29/2011
