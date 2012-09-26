@@ -14,7 +14,7 @@ endif
 source ${MGICONFIG}/master.config.csh
 
 # directory
-setenv MGICACHEDIR		/data/loads/mgi/mgicacheload
+setenv MGICACHEDIR		${DATALOADSOUTPUT}/mgi/mgicacheload
 
 # input directory
 setenv MGICACHEINDIR		${MGICACHEDIR}/input
