@@ -1,3 +1,9 @@
+TAG: mgicacheload-5-1-2-1
+DATE: 01/15/2013
+STAFF: lec
+CHANGES:
+1) TR11268/imgcache.py/escape pane labels that contain double quotes (")
+
 TAG: mgicacheload-5-1-0-1
 DATE: 10/18/2012
 STAFF: dbm

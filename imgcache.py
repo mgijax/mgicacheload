@@ -24,6 +24,9 @@
 #		
 # History
 #
+# 01/15/201	lec
+#	- TR 11268/SQL/escape double quotes in pane labels
+#
 # 09/14/2011	lec
 #	- TR 10852; do not select Alleles where _Marker_key is null
 #
@@ -363,7 +366,7 @@ def process(objectKey):
 		if r['paneLabel'] == None:
 		    paneLabel = 'null'
 		else:
-		    paneLabel = '"' + r['paneLabel'] + '"'
+		    paneLabel = '"' + r['paneLabel'].replace('"', '""') + '"'
 
 		if r['assayType'] == None:
 		    assayType = 'null'
@@ -379,7 +382,7 @@ def process(objectKey):
 
 	        nextMaxKey = nextMaxKey + 1
 
-	        db.sql(insertSQL % (str(nextMaxKey), \
+	        doInsertSQL = insertSQL % (str(nextMaxKey), \
 		    mgi_utils.prvalue(imageKey), \
 		    mgi_utils.prvalue(r['_ThumbnailImage_key']), \
 		    mgi_utils.prvalue(r['_ImagePane_key']), \
@@ -394,7 +397,9 @@ def process(objectKey):
 		    mgi_utils.prvalue(x),\
 		    mgi_utils.prvalue(assayType),\
 		    mgi_utils.prvalue(r['figureLabel']), \
-		    mgi_utils.prvalue(paneLabel)), None)
+		    mgi_utils.prvalue(paneLabel))
+		print doInsertSQL
+	        db.sql(doInsertSQL, None)
 
 #
 # Main Routine
