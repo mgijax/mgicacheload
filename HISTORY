@@ -1,8 +1,14 @@
+TAG: mgicacheload-tr6519-2
+DATE: 03/15/2013
+STAFF: sc
+CHANGES:
+1)inferredfrom.py - don't remove 'RGD:' from rgd IDs 
+
 TAG: mgicacheload-tr6519-1
 DATE: 03/15/2013
 STAFF: sc
 CHANGES:
-1) changed providerMap 'rgd' : 4 to 'rgd' : 47
+1) inferredfrom.py - changed providerMap 'rgd' : 4 to 'rgd' : 47
 
 TAG: mgicacheload-tr6519-BP
 DATE: 03/15/2013
