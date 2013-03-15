@@ -75,7 +75,7 @@ providerMap = {
 	'protein_id' : 13,
 	'ncbi' : 27,
 	'refseq' : 27,
-	'rgd' : 4,
+	'rgd' : 47,
 	'uniprotkb-kw' : 111,
 	'sp_kw' : 111,
 	'sgd' : 114,
