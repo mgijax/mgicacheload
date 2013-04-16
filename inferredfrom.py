@@ -75,7 +75,7 @@ providerMap = {
 	'protein_id' : 13,
 	'ncbi' : 27,
 	'refseq' : 27,
-	'rgd' : 4,
+	'rgd' : 47,
 	'uniprotkb-kw' : 111,
 	'sp_kw' : 111,
 	'sgd' : 114,
@@ -300,8 +300,8 @@ def processCache():
 				if accID == '':
 				    continue
 
-				# MGI and GO ids (logicalDB = 1) are stored
-				# with the MGI: and GO: as part of the accession id
+				# MGI, GO and RGD IDs are stored
+				# with the MGI:,  GO: and RGD: prefixes
 				# for all others, we do not store the ##: part
 
 		    		fullAccID = accID
@@ -309,7 +309,7 @@ def processCache():
 		    		provider = tokens[0].lower()
 		    		accIDPart = tokens[1]
 
-		        	if provider != 'mgi' and provider != 'go':
+		        	if provider != 'mgi' and provider != 'go' and provider != 'rgd':
 					accID = accIDPart
 
 				# for EMBL ids, check if accession id is valid
