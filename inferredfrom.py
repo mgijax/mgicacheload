@@ -15,6 +15,9 @@
 #		
 # History
 #
+# 08/26/2013	lec
+#	- TR 11359/add 'pr:' : 135 = ldb
+#
 # 03/01/2012	lec
 #	- TR 10950
 # 	'sp_kw' changed to 'uniprotkb-kw' : 111
@@ -72,6 +75,7 @@ providerMap = {
 	'interpro' : 28,
 	'pir' : 78,
 	'pfam' : 119,
+	'pr' : 135,
 	'protein_id' : 13,
 	'ncbi' : 27,
 	'refseq' : 27,
