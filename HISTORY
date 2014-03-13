@@ -1,3 +1,12 @@
+TAG: mgicacheload-5-1-8-1
+DATE: 03/13/2014
+STAFF: lec
+CHANGES:
+1) TR11540/remove:
+vocallele.csh
+voccounts.csh
+vocmarker.csh
+
 TAG: mgicacheload-5-1-4-1
 DATE: 08/26/2013
 STAFF: lec
