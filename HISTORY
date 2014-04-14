@@ -1,3 +1,10 @@
+TAG: mgicacheload-5-1-8-2
+DATE: 04/14/2014
+STAFF: lec
+CHANGES:
+1) since GXD/Expression images are no longer using this cache, remove
+the code that include 'Expression'/_MGIType_key = 11
+
 TAG: mgicacheload-5-1-8-1
 DATE: 03/13/2014
 STAFF: lec

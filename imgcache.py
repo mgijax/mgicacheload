@@ -118,7 +118,7 @@ def process(objectKey):
 
 	#
 	# retrieve images that have thumbnails and are in pixel DB
-	# only include Expression and Phenotype images
+	# only include Phenotype images
 	#
 
         cmd = '''select i._Image_key, i._MGIType_key, i._ImageClass_key, 
@@ -126,9 +126,9 @@ def process(objectKey):
 		 i.figureLabel, ip._ImagePane_key, ip.paneLabel, r.year, a.numericPart 
 		into #images 
 		from IMG_Image i, BIB_Refs r, IMG_ImagePane ip, ACC_Accession a, VOC_Term t
-		where i._MGIType_key in (8, 11) 
+		where i._MGIType_key in (11) 
 		and i._ImageClass_key = t._Term_key
-		and t.term in ('Expression', 'Phenotypes')
+		and t.term in ('Phenotypes')
 		and i._ThumbnailImage_key is not null 
 		and i.xdim is not null 
 		and i._Refs_key = r._Refs_key 
