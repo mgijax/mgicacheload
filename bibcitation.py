@@ -18,6 +18,10 @@
 #
 # History
 #
+# 04/16/2014	lec
+#	- update usage to include -S and -D
+#	- coordinate with ei/dsrc/PythonReference
+#
 # 01/19/2010	lec
 #	- TR 10037/remove quotes from citations
 #
@@ -52,6 +56,8 @@ def showUsage():
 	'''
  
 	usage = 'usage: %s\n' % sys.argv[0] + \
+                '-S server\n' + \
+                '-D database\n' + \
 		'-U user\n' + \
 		'-P password file\n' + \
 		'-K object key\n'
@@ -217,30 +223,38 @@ def process(objectKey):
 print '%s' % mgi_utils.date()
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'U:P:K:')
+	optlist, args = getopt.getopt(sys.argv[1:], 'S:D:U:P:K:')
 except:
 	showUsage()
 
-server = db.get_sqlServer()
-database = db.get_sqlDatabase()
+server = None
+database = None
 user = None
 password = None
 objectKey = None
 
 for opt in optlist:
-	if opt[0] == '-U':
-		user = opt[1]
-	elif opt[0] == '-P':
-		password = string.strip(open(opt[1], 'r').readline())
-	elif opt[0] == '-K':
-		objectKey = string.atoi(opt[1])
-	else:
-		showUsage()
+        if opt[0] == '-S':
+                server = opt[1]
+        elif opt[0] == '-D':
+                database = opt[1]
+        elif opt[0] == '-U':
+                user = opt[1]
+        elif opt[0] == '-P':
+                password = string.strip(open(opt[1], 'r').readline())
+        elif opt[0] == '-W':
+                password = opt[1]
+        elif opt[0] == '-K':
+                objectKey = string.atoi(opt[1])
+        else:
+                showUsage()
 
-if user is None or \
+if server is None or \
+   database is None or \
+   user is None or \
    password is None or \
    objectKey is None:
-	showUsage()
+        showUsage()
 
 db.set_sqlLogin(user, password, server, database)
 db.useOneConnection(1)
