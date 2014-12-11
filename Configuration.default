@@ -46,12 +46,12 @@ if ( ${DB_TYPE} == "postgres" ) then
     setenv MGICACHEDIR          ${DATALOADSOUTPUT}/mgi/mrkcacheload/postgres
 
     # input directory
-    setenv MGICACHEINDIR                ${MRKCACHEDIR}/input
+    setenv MGICACHEINDIR                ${MGICACHEDIR}/input
 
     # bcp output directory
-    setenv MGICACHEBCPDIR               ${MRKCACHEDIR}/output
+    setenv MGICACHEBCPDIR               ${MGICACHEDIR}/output
 
     # log directory
-    setenv MGICACHELOGDIR               ${MRKCACHEDIR}/logs
+    setenv MGICACHELOGDIR               ${MGICACHEDIR}/logs
 
 endif
