@@ -21,15 +21,24 @@
 
 import sys
 import os
-import db
 import mgi_utils
 
+COLDL = os.environ['COLDELIM']
+outDir = os.environ['MGICACHEBCPDIR']
+LINEDL = '\n'
 try:
-    COLDL = os.environ['COLDELIM']
-    LINEDL = '\n'
     table = os.environ['TABLE']
-    outDir = os.environ['MGICACHEBCPDIR']
+    if os.environ['DB_TYPE'] == 'postgres':
+        import pg_db
+        db = pg_db
+        db.setTrace()
+        db.setAutoTranslateBE()
+    else:
+        import db
+        db.set_sqlLogFunction(db.sqlLogAll)
 except:
+    import db
+    db.set_sqlLogFunction(db.sqlLogAll)
     table = 'VOC_GO_Cache'
 
 def createBCPfile():
