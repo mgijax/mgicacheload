@@ -50,16 +50,26 @@ import os
 import getopt
 import string
 import time
-import db
 import mgi_utils
 
+COLDL = os.environ['COLDELIM']
+outDir = os.environ['MGICACHEBCPDIR']
+LINEDL = '\n'
 try:
-    COLDL = os.environ['COLDELIM']
-    LINEDL = '\n'
     table = os.environ['TABLE']
-    outDir = os.environ['MGICACHEBCPDIR']
+    if os.environ['DB_TYPE'] == 'postgres':
+        import pg_db
+        db = pg_db
+        db.setTrace()
+        db.setAutoTranslateBE()
+    else:
+        import db
+        db.set_sqlLogFunction(db.sqlLogAll)
 except:
+    import db
+    db.set_sqlLogFunction(db.sqlLogAll)
     table = 'IMG_Cache'
+
 
 insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s",%s)'
 
@@ -149,8 +159,8 @@ def process(objectKey):
 	    cmd = cmd + ' and convert(char(10), i.modification_date, 101) = convert(char(10), getdate(), 101)'
 
 	db.sql(cmd, None)
-	db.sql('create index idx1 on #images(_Image_key)', None)
-	db.sql('create index idx2 on #images(_ImagePane_key)', None)
+	db.sql('create index imgpane_idx1 on #images(_Image_key)', None)
+	db.sql('create index imagepane_idx2 on #images(_ImagePane_key)', None)
 
 	#
 	# image/marker associations
@@ -181,19 +191,25 @@ def process(objectKey):
 
 	# must allow null assay type info to accommodate pheno images
 
-	db.sql ('alter table #imageassoc modify _AssayType_key null', None)
-	db.sql ('alter table #imageassoc modify assayType null', None)
+	if os.environ["DB_TYPE"] != 'postgres':
+	    db.sql ('alter table #imageassoc modify _AssayType_key null', None)
+	    db.sql ('alter table #imageassoc modify assayType null', None)
 
 	# add pheno images
+	assayTypeKeyNull = 'null'
+	assayTypeNull = 'null'
+	if os.environ["DB_TYPE"] == 'postgres':
+	    assayTypeKeyNull = 'null::integer'
+	    assayTypeNull = 'null::text'
 
 	db.sql ('''insert into #imageassoc
-		select distinct i.*, 2, aa._Marker_key, null, null, sortOrder = 5
+		select distinct i.*, 2, aa._Marker_key, %s, %s, sortOrder = 5
 		from #images i, IMG_ImagePane_Assoc ipa, ALL_Allele aa
 		where i._ImagePane_key = ipa._ImagePane_key
 		and ipa._Object_key = aa._Allele_key
 		and ipa._MGIType_key = 11	-- allele
 		and aa._Marker_key is not null
-		''', None)
+		''' % (assayTypeKeyNull, assayTypeNull), None)
 
 	# prioritize pheno images from J:98862, leave others as sort order 5
 
@@ -335,6 +351,8 @@ def process(objectKey):
 
 	    db.sql('delete from %s where _Refs_key = %s' % (table, objectKey), None)
 
+            db.commit()
+
 	    for r in results:
 
 		markerKey = r['_Object_key']
@@ -400,6 +418,8 @@ def process(objectKey):
 		    mgi_utils.prvalue(paneLabel))
 		print doInsertSQL
 	        db.sql(doInsertSQL, None)
+		
+		db.commit()
 
 #
 # Main Routine
@@ -451,7 +471,8 @@ if jNumber is not None:
 	objectKey = getRefKey(jNumber)
 
 if objectKey == 0:
-	db.set_sqlLogFunction(db.sqlLogAll)
+	pass
+	#db.set_sqlLogFunction(db.sqlLogAll)
 
 process(objectKey)
 db.useOneConnection(0)
