@@ -55,20 +55,15 @@ import mgi_utils
 COLDL = os.environ['COLDELIM']
 outDir = os.environ['MGICACHEBCPDIR']
 LINEDL = '\n'
-try:
-    table = os.environ['TABLE']
-    if os.environ['DB_TYPE'] == 'postgres':
-        import pg_db
-        db = pg_db
-        db.setTrace()
-        db.setAutoTranslateBE()
-    else:
-        import db
-        db.set_sqlLogFunction(db.sqlLogAll)
-except:
+table = 'TABLE' in os.environ and os.environ['TABLE'] or 'IMG_CACHE'
+if os.environ['DB_TYPE'] == 'postgres':
+    import pg_db
+    db = pg_db
+    db.setTrace()
+    db.setAutoTranslateBE()
+else:
     import db
     db.set_sqlLogFunction(db.sqlLogAll)
-    table = 'IMG_Cache'
 
 
 insertSQL = 'insert into IMG_Cache values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"%s",%s)'
@@ -118,7 +113,7 @@ def process(objectKey):
 	if objectKey == 0:
             nextMaxKey = 0
         else:
-	    results = db.sql('select cacheKey = max(_Cache_key) from %s' % (table), 'auto')
+	    results = db.sql('select max(_Cache_key) as cacheKey from %s' % (table), 'auto')
              
 	    for r in results:
 		nextMaxKey = r['cacheKey']
