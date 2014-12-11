@@ -13,6 +13,9 @@ endif
 
 source ${MGICONFIG}/master.config.csh
 
+# database schema
+setenv PG_DB_SCHEMA mgd
+
 # directory
 setenv MGICACHEDIR		${DATALOADSOUTPUT}/mgi/mgicacheload
 
