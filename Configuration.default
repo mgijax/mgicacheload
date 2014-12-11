@@ -30,6 +30,7 @@ setenv MGICACHELOGDIR		${MGICACHEDIR}/logs
 
 #setenv COLDELIM		"&#&"
 setenv COLDELIM		"|"
+setenv LINEDELIM	"\n"
 setenv CREATEDBY        1000
 
 if ( ! $?DB_TYPE ) then
