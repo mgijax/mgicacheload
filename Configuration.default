@@ -30,8 +30,11 @@ setenv MGICACHELOGDIR		${MGICACHEDIR}/logs
 
 #setenv COLDELIM		"&#&"
 setenv COLDELIM		"|"
-setenv LINEDELIM	"\n"
 setenv CREATEDBY        1000
+
+if ( ! $?DB_TYPE ) then
+    setenv DB_TYPE sybase
+endif
 
 # Postgres specific config goes here
 if ( ${DB_TYPE} == "postgres" ) then
@@ -40,15 +43,15 @@ if ( ${DB_TYPE} == "postgres" ) then
     setenv BCP_CMD "${PG_DBUTILS}/bin/bcpin.csh ${PG_DBSERVER} ${PG_DBNAME}"
 
     # directory
-    setenv MRKCACHEDIR          ${DATALOADSOUTPUT}/mgi/mrkcacheload/postgres
+    setenv MGICACHEDIR          ${DATALOADSOUTPUT}/mgi/mrkcacheload/postgres
 
     # input directory
-    setenv MRKCACHEINDIR                ${MRKCACHEDIR}/input
+    setenv MGICACHEINDIR                ${MRKCACHEDIR}/input
 
     # bcp output directory
-    setenv MRKCACHEBCPDIR               ${MRKCACHEDIR}/output
+    setenv MGICACHEBCPDIR               ${MRKCACHEDIR}/output
 
     # log directory
-    setenv MRKCACHELOGDIR               ${MRKCACHEDIR}/logs
+    setenv MGICACHELOGDIR               ${MRKCACHEDIR}/logs
 
 endif
