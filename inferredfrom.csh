@@ -19,6 +19,10 @@ touch $LOG
 
 date | tee -a ${LOG}
 
+if ( ${DB_TYPE} == "postgres" ) then
+./inferredfrom.py -S${PG_DBSERVER} -D${PG_DBNAME} -U${PG_DBUSER} -P${PG_1LINE_PASSFILE} -K${OBJECTKEY} |& tee -a ${LOG}
+else
 ./inferredfrom.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} |& tee -a ${LOG}
+endif
 
 date | tee -a ${LOG}

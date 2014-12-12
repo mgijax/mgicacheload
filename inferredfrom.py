@@ -53,12 +53,20 @@ import os
 import getopt
 import string
 import re
-import db
 import mgi_utils
 import accessionlib
 
 objectKey = None
 createdBy = None
+
+if os.environ['DB_TYPE'] == 'postgres':
+    import pg_db
+    db = pg_db
+    db.setTrace()
+    db.setAutoTranslateBE()
+else:
+    import db
+    db.set_sqlLogFunction(db.sqlLogAll)
 
 execSQL = 'exec ACC_insertNoChecks %d,"%s",%d,"Annotation Evidence",-1,1,1'
 eiErrorStatus = '%s     %s     %s\n'
@@ -186,7 +194,8 @@ def init():
         # Log all SQL if runnning checker, loading all data or
 	# running the load by a specific user
 	if objectKey <= 0 or createdBy is not None:
-        	db.set_sqlLogFunction(db.sqlLogAll)
+		pass
+        	#db.set_sqlLogFunction(db.sqlLogAll)
 
 def preCache():
 	#
@@ -227,8 +236,9 @@ def preCache():
 	# delete existing cache data
 
 	if objectKey >= 0 or createdBy is not None:
-		db.sql('delete ACC_Accession from #toCheck d, ACC_Accession a ' + \
-			'where d._Accession_key = a._Accession_key', None)
+		db.sql('delete from ACC_Accession \nfrom #toCheck d ' + \
+			'where d._Accession_key = ACC_Accession._Accession_key', None)
+		db.commit()
 
 	# copy existing cache table accession keys
 
@@ -346,8 +356,12 @@ def processCache():
 					else:
 						eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
 
-			except:
+			except Exception, e:
+				print e
 				eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
+
+	# commit after all records have been processed
+	db.commit()
 
 	if eiErrors != '':
 		# the EI will pick up the standard output via the ei/dsrc/PythonLib.d/PythonInferredFromCache code
