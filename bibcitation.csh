@@ -21,26 +21,32 @@ touch $LOG
 date | tee -a ${LOG}
 
 # Create the bcp file
-./bibcitation.py -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} | tee -a ${LOG}
+echo "---Creating BCP file"
+if ( ${DB_TYPE} == "postgres" ) then
+./bibcitation.py -S${PG_DBSERVER} -D${PG_DBNAME} -U${PG_DBUSER} -P${PG_1LINE_PASSFILE} -K${OBJECTKEY} |& tee -a ${LOG}
+else
+./bibcitation.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} |& tee -a ${LOG}
+endif
 
 # Exit if bcp file is empty
-
+echo "---Ensure BCP file is not empty"
 if ( -z ${MGICACHEBCPDIR}/${TABLE}.bcp ) then
 echo 'BCP File is empty' | tee -a ${LOG}
 exit 0
 endif
 
 # truncate table
-
-${MGD_DBSCHEMADIR}/table/${TABLE}_truncate.object | tee -a ${LOG}
+echo "---Truncating table"
+${SCHEMADIR}/table/${TABLE}_truncate.object | tee -a ${LOG}
 
 # Drop indexes
-${MGD_DBSCHEMADIR}/index/${TABLE}_drop.object | tee -a ${LOG}
+${SCHEMADIR}/index/${TABLE}_drop.object | tee -a ${LOG}
 
 # BCP new data into tables
-${MGI_DBUTILS}/bin/bcpin.csh ${MGD_DBSERVER} ${MGD_DBNAME} ${TABLE} ${MGICACHEBCPDIR} ${TABLE}.bcp ${COLDELIM} ${LINEDELIM} | tee -a ${LOG}
+#${MGI_DBUTILS}/bin/bcpin.csh ${MGD_DBSERVER} ${MGD_DBNAME} ${TABLE} ${MGICACHEBCPDIR} ${TABLE}.bcp ${COLDELIM} ${LINEDELIM} | tee -a ${LOG}
+${BCP_CMD} ${TABLE} ${MGICACHEBCPDIR} ${TABLE}.bcp ${COLDELIM} ${LINEDELIM} ${PG_DB_SCHEMA} | tee -a ${LOG}
 
 # Create indexes
-${MGD_DBSCHEMADIR}/index/${TABLE}_create.object | tee -a ${LOG}
+${SCHEMADIR}/index/${TABLE}_create.object | tee -a ${LOG}
 
 date | tee -a ${LOG}

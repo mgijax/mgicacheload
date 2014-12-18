@@ -18,6 +18,10 @@
 #
 # History
 #
+# 04/16/2014	lec
+#	- update usage to include -S and -D
+#	- coordinate with ei/dsrc/PythonReference
+#
 # 01/19/2010	lec
 #	- TR 10037/remove quotes from citations
 #
@@ -31,16 +35,28 @@ import sys
 import os
 import getopt
 import string
-import db
+#import db
 import mgi_utils
 
+COLDL = os.environ['COLDELIM']
+outDir = os.environ['MGICACHEBCPDIR']
+LINEDL = '\n'
+
 try:
-    COLDL = os.environ['COLDELIM']
-    LINEDL = '\n'
     table = os.environ['TABLE']
-    outDir = os.environ['MGICACHEBCPDIR']
+    if os.environ['DB_TYPE'] == 'postgres':
+        import pg_db
+        db = pg_db
+        db.setTrace()
+        db.setAutoTranslateBE()
+    else:
+        import db
+        db.set_sqlLogFunction(db.sqlLogAll)
 except:
+    import db
+    db.set_sqlLogFunction(db.sqlLogAll)
     table = 'BIB_Citation_Cache'
+
 
 insertSQL = 'insert into BIB_Citation_Cache values (%s,%s,"%s","%s","%s","%s","%s","%s","%s", %s, "%s")'
 
@@ -52,6 +68,8 @@ def showUsage():
 	'''
  
 	usage = 'usage: %s\n' % sys.argv[0] + \
+                '-S server\n' + \
+                '-D database\n' + \
 		'-U user\n' + \
 		'-P password file\n' + \
 		'-K object key\n'
@@ -66,11 +84,12 @@ def process(objectKey):
 	#
 
         cmd = 'select r._Refs_key, r.journal, reviewStatus = s.name, r.isReviewArticle, ' + \
-		'citation = r.journal + " " + r.date + ";" + r.vol + "(" + r.issue + "):" + r.pgs, ' + \
-		'short_citation = r._primary + ", " + r.journal + " " + r.date + ";" + r.vol + "(" + r.issue + "):" + r.pgs ' + \
-		'into #references ' + \
+		'coalesce(r.journal, "") || " " || coalesce(r.date, "") || ";" || coalesce(r.vol, "") || "(" || coalesce(r.issue, "") || "):" || coalesce(r.pgs, "") as citation, ' \
+		'coalesce(r._primary, "") || ", " || coalesce(r.journal, "") || " " || coalesce(r.date, "") || ";" || coalesce(r.vol, "") || "(" || coalesce(r.issue, "") || "):" || coalesce(r.pgs, "") as short_citation ' \
+		'into #refsTemp ' + \
 		'from BIB_Refs r, BIB_ReviewStatus s ' + \
 		'where r._ReviewStatus_key = s._ReviewStatus_key '
+	
 
 	if objectKey > 0:
 	    cmd = cmd + 'and r._Refs_key = %s' % (objectKey)
@@ -85,14 +104,14 @@ def process(objectKey):
 	    cmd = cmd + 'and convert(char(10), r.modification_date, 101) = convert(char(10), getdate(), 101)'
 
 	db.sql(cmd, None)
-	db.sql('create index idx1 on #references(_Refs_key)', None)
+	db.sql('create index idx1 on #refsTemp(_Refs_key)', None)
 
 	#
 	# mgi ids
 	#
 
         results = db.sql('select a._Object_key, a.accID ' + \
-		'from #references r, ACC_Accession a ' + \
+		'from #refsTemp r, ACC_Accession a ' + \
 		'where r._Refs_key = a._Object_key ' + \
 		'and a._MGIType_key = 1 ' + \
 		'and a._LogicalDB_key = 1 ' + \
@@ -108,7 +127,7 @@ def process(objectKey):
 	#
 
         results = db.sql('select a._Object_key, a.accID, a.numericPart ' + \
-		'from #references r, ACC_Accession a ' + \
+		'from #refsTemp r, ACC_Accession a ' + \
 		'where r._Refs_key = a._Object_key ' + \
 		'and a._MGIType_key = 1 ' + \
 		'and a._LogicalDB_key = 1 ' + \
@@ -124,7 +143,7 @@ def process(objectKey):
 	#
 
         results = db.sql('select a._Object_key, a.accID ' + \
-		'from #references r, ACC_Accession a ' + \
+		'from #refsTemp r, ACC_Accession a ' + \
 		'where r._Refs_key = a._Object_key ' + \
 		'and a._MGIType_key = 1 ' + \
 		'and a._LogicalDB_key = 29 ' + \
@@ -136,7 +155,7 @@ def process(objectKey):
 
 	# process all records
 
-	results = db.sql('select * from #references', 'auto')
+	results = db.sql('select * from #refsTemp', 'auto')
 
 	if objectKey == 0:
 
@@ -176,7 +195,7 @@ def process(objectKey):
 	    # delete existing cache table entries
 
 	    db.sql('delete %s ' % (table) + \
-		'from #references r, %s c ' % (table) + \
+		'from #refsTemp r, %s c ' % (table) + \
 		'where r._Refs_key = c._Refs_key', None)
 
 	    for r in results:
@@ -217,36 +236,42 @@ def process(objectKey):
 print '%s' % mgi_utils.date()
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'U:P:K:')
+	optlist, args = getopt.getopt(sys.argv[1:], 'S:D:U:P:K:')
 except:
 	showUsage()
 
-server = db.get_sqlServer()
-database = db.get_sqlDatabase()
+server = None
+database = None
 user = None
 password = None
 objectKey = None
 
 for opt in optlist:
-	if opt[0] == '-U':
-		user = opt[1]
-	elif opt[0] == '-P':
-		password = string.strip(open(opt[1], 'r').readline())
-	elif opt[0] == '-K':
-		objectKey = string.atoi(opt[1])
-	else:
-		showUsage()
+        if opt[0] == '-S':
+                server = opt[1]
+        elif opt[0] == '-D':
+                database = opt[1]
+        elif opt[0] == '-U':
+                user = opt[1]
+        elif opt[0] == '-P':
+                password = string.strip(open(opt[1], 'r').readline())
+        elif opt[0] == '-K':
+                objectKey = string.atoi(opt[1])
+        else:
+                showUsage()
 
-if user is None or \
+if server is None or \
+   database is None or \
+   user is None or \
    password is None or \
    objectKey is None:
-	showUsage()
+        showUsage()
 
 db.set_sqlLogin(user, password, server, database)
 db.useOneConnection(1)
 
-if objectKey == 0:
-    db.set_sqlLogFunction(db.sqlLogAll)
+#if objectKey == 0:
+#    db.set_sqlLogFunction(db.sqlLogAll)
 
 process(objectKey)
 db.useOneConnection(0)
