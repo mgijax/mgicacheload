@@ -83,12 +83,22 @@ def process(objectKey):
 	# reference attributes
 	#
 
-        cmd = 'select r._Refs_key, r.journal, reviewStatus = s.name, r.isReviewArticle, ' + \
-		'coalesce(r.journal, "") || " " || coalesce(r.date, "") || ";" || coalesce(r.vol, "") || "(" || coalesce(r.issue, "") || "):" || coalesce(r.pgs, "") as citation, ' \
-		'coalesce(r._primary, "") || ", " || coalesce(r.journal, "") || " " || coalesce(r.date, "") || ";" || coalesce(r.vol, "") || "(" || coalesce(r.issue, "") || "):" || coalesce(r.pgs, "") as short_citation ' \
-		'into #refsTemp ' + \
-		'from BIB_Refs r, BIB_ReviewStatus s ' + \
-		'where r._ReviewStatus_key = s._ReviewStatus_key '
+	if os.environ['DB_TYPE'] == 'postgres':
+
+	    cmd = 'select r._Refs_key, r.journal, reviewStatus = s.name, r.isReviewArticle, ' + \
+		    'coalesce(r.journal, "") || " " || coalesce(r.date, "") || ";" || coalesce(r.vol, "") || "(" || coalesce(r.issue, "") || "):" || coalesce(r.pgs, "") as citation, ' \
+		    'coalesce(r._primary, "") || ", " || coalesce(r.journal, "") || " " || coalesce(r.date, "") || ";" || coalesce(r.vol, "") || "(" || coalesce(r.issue, "") || "):" || coalesce(r.pgs, "") as short_citation ' \
+		    'into #refsTemp ' + \
+		    'from BIB_Refs r, BIB_ReviewStatus s ' + \
+		    'where r._ReviewStatus_key = s._ReviewStatus_key '
+	else:
+
+	    cmd = 'select r._Refs_key, r.journal, reviewStatus = s.name, r.isReviewArticle, ' + \
+		    'r.journal || " " || r.date || ";" || r.vol || "(" || r.issue || "):" || r.pgs as citation, ' \
+		    'r._primary || ", " || r.journal || " " || r.date || ";" || r.vol || "(" || r.issue || "):" || r.pgs as short_citation ' \
+		    'into #refsTemp ' + \
+		    'from BIB_Refs r, BIB_ReviewStatus s ' + \
+		    'where r._ReviewStatus_key = s._ReviewStatus_key '
 	
 
 	if objectKey > 0:
