@@ -43,7 +43,6 @@ ${SCHEMADIR}/table/${TABLE}_truncate.object | tee -a ${LOG}
 ${SCHEMADIR}/index/${TABLE}_drop.object | tee -a ${LOG}
 
 # BCP new data into tables
-#${MGI_DBUTILS}/bin/bcpin.csh ${MGD_DBSERVER} ${MGD_DBNAME} ${TABLE} ${MGICACHEBCPDIR} ${TABLE}.bcp ${COLDELIM} ${LINEDELIM} | tee -a ${LOG}
 ${BCP_CMD} ${TABLE} ${MGICACHEBCPDIR} ${TABLE}.bcp ${COLDELIM} ${LINEDELIM} ${PG_DB_SCHEMA} | tee -a ${LOG}
 
 # Create indexes
