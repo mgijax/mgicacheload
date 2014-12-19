@@ -223,7 +223,7 @@ def process(objectKey):
 
 	    # delete existing cache table entries
 
-	    db.sql('delete from %s from #refsTemp r, %s c where r._Refs_key = c._Refs_key' % (table, table), None)
+	    db.sql('delete from %s from #refsTemp r where r._Refs_key = %s._Refs_key' % (table, table), None)
 	    db.commit()
 
 	    for r in results:
