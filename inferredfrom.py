@@ -15,6 +15,9 @@
 #		
 # History
 #
+# 01/30/2015	jsb
+#	- TR 11914: make protein_ids go to RefSeq (27), not SWISS-PROT (13)
+#
 # 08/26/2013	lec
 #	- TR 11359/add 'pr:' : 135 = ldb
 #
@@ -84,7 +87,7 @@ providerMap = {
 	'pir' : 78,
 	'pfam' : 119,
 	'pr' : 135,
-	'protein_id' : 13,
+	'protein_id' : 27,
 	'ncbi' : 27,
 	'refseq' : 27,
 	'rgd' : 47,
