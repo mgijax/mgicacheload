@@ -167,7 +167,6 @@ def process(assayKey):
 	if assayKey == 0 we create full BCP File
 	else we live update the cache for one assay
 	"""
-	print "processing assayKey = %s" % assayKey
 
 	# determine type of load
 	if assayKey == 0:
@@ -235,11 +234,7 @@ def _fetchInsituResults(assayKey=None):
 
 	results = db.sql(insituSql, 'auto')
 
-	print results
-
 	results = mergeInsituResults(results)
-
-	print results
 
 	return results
 
@@ -415,9 +410,6 @@ def _updateExpressionCache(assayKey, results):
 		maxKey += 1
 		result.insert(0, maxKey)
 
-		print result
-		print len(result)
-		print INSERT_SQL
 		insertSql = INSERT_SQL % tuple([_sanitize(c) for c in result])
 
 		db.sql(insertSql, None)
