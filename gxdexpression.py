@@ -56,6 +56,8 @@ except:
 COLDL = '|'
 LINEDL = '\n'
 TABLE = 'GXD_Expression'
+CDATE = mgi_utils.date("%m/%d/%Y")
+BCP_FILENAME = outDir + '/%s.bcp' % TABLE
 
 # order of fields
 INSERT_SQL = 'insert into GXD_Expression (%s) values (%s)' % \
@@ -176,7 +178,21 @@ def process(assayKey):
 
 ### Shared Methods (for any type of load) ###
 
-def _fetchInsituResults(assayKey=None):
+def _fetchMaxExpressionKey():
+	"""
+	Return the current max _expression_key in cache
+	"""
+	return db.sql('''select max(_expression_key) as maxkey from %s''' % TABLE, 
+		'auto')[0]['maxkey'] or 1
+
+def _fetchMaxAssayKey():
+	"""
+	Return the current max _assay_key in gxd_assay
+	"""
+	return db.sql('''select max(_assay_key) as maxkey from gxd_assay''', 
+		'auto')[0]['maxkey'] or 1
+
+def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 	"""
 	Load Insitu results from DB
 	returns results
@@ -229,34 +245,35 @@ def _fetchInsituResults(assayKey=None):
 			reporter._term_key = a._reportergene_key
 	'''
 
-	if assayKey:
+	if startKey != None and endKey != None:
+		insituSql += '\nwhere a._assay_key >= %s and a._assay_key < %s' % \
+			(startKey, endKey)
+
+	elif assayKey:
 		insituSql += '\nwhere a._assay_key = %d' % assayKey
 
 	results = db.sql(insituSql, 'auto')
 
-	results = mergeInsituResults(results)
-
+	print "got %d results" % len(results)
 	return results
 
 def mergeInsituResults(dbResults):
 	"""
-	processes the results from database
-	and transforms them into cache records
+	groups the results from database
+	by uniqueness of cache fields,
+	returns list result groups
 	"""
-	results = []
 	resultMap = {}
 
 	# group database results by cache uniqueness
 	for dbResult in dbResults:
-		key = (dbResult['_result_key'], 
+		key = (dbResult['_specimen_key'], 
 			dbResult['_structure_key'])
 		resultMap.setdefault(key, []).append(dbResult)
 
-	results = generateCacheResults(resultMap.values())
+	return resultMap.values()
 
-	return results
-
-def _fetchGelResults(assayKey=None):
+def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 	"""
 	Load Gel (Blot) results from DB
 	returns results
@@ -284,9 +301,10 @@ def _fetchGelResults(assayKey=None):
 		reporter.term reportergene
 	from gxd_assay a 
 		join
-		gxd_gellane gl on
+		gxd_gellane gl on (
 			gl._assay_key = a._assay_key
-		join
+			and gl._gelcontrol_key = 1
+		) join
 		gxd_gellanestructure gls on
 			gls._gellane_key = gl._gellane_key
 		join
@@ -306,32 +324,33 @@ def _fetchGelResults(assayKey=None):
 			reporter._term_key = a._reportergene_key
 	'''
 
-	if assayKey:
+	if startKey != None and endKey != None:
+		gelSql += '\nwhere a._assay_key >= %s and a._assay_key < %s' % \
+			(startKey, endKey)
+
+	elif assayKey:
 		gelSql += '\nwhere a._assay_key = %d' % assayKey
 
 	results = db.sql(gelSql, 'auto')
-
-	results = mergeGelResults(results)
+	print "got %d results" % len(results)
 
 	return results
 
 def mergeGelResults(dbResults):
 	"""
-	processes the results from database
-	and transforms them into cache records
+	groups the results from database
+	by uniqueness of cache fields,
+	returns list result groups
 	"""
-	results = []
 	resultMap = {}
 
 	# group database results by cache uniqueness
 	for dbResult in dbResults:
-		key = (dbResult['_gelband_key'], 
+		key = (dbResult['_gellane_key'], 
 			dbResult['_structure_key'])
 		resultMap.setdefault(key, []).append(dbResult)
 
-	results = generateCacheResults(resultMap.values())
-
-	return results
+	return resultMap.values()
 
 def generateCacheResults(dbResultGroups):
 	"""
@@ -424,10 +443,15 @@ def computeHasImage(dbResults):
 			hasimage = 1
 	return hasimage
 
-def _sanitize(col):
+def _sanitizeInsert(col):
 	if col==None:
 		return 'NULL'
 	return col
+
+def _sanitizeBCP(col):
+	if col==None:
+		return ''
+	return str(col)
 
 ### Full Load Processing Methods ###
 
@@ -437,7 +461,66 @@ def createFullBCPFile():
 	for a full reload of the cache
 	( This file is used by external process to load cache )
 	"""
-	pass
+
+	# clear any previous bcp file
+	fp = open(BCP_FILENAME, 'w')
+	fp.close()
+
+	maxAssayKey = _fetchMaxAssayKey()
+
+	# batches of assays to process at a time
+	batchSize = 1000
+
+	numBatches = (maxAssayKey / batchSize) + 1
+
+	startingCacheKey = 1
+	for i in range(numBatches):
+		startKey = i * batchSize
+		endKey = startKey + batchSize
+
+		print "processing batch of _assay_keys %s to %s" % (startKey, endKey)
+
+		# get insitu results
+		dbResults = _fetchInsituResults(startKey=startKey, endKey=endKey)
+		resultGroups = mergeInsituResults(dbResults)
+
+		
+		# get gel results
+		dbResults = _fetchGelResults(startKey=startKey, endKey=endKey)
+		resultGroups.extend(mergeGelResults(dbResults))
+
+		# use groups of DB results to compute cache columns
+		# and create the actual cache records
+		results = generateCacheResults(resultGroups)
+
+		# write/append found results to BCP file
+		_writeToBCPFile(results, startingKey=startingCacheKey)
+
+		startingCacheKey += len(results)
+
+
+def _writeToBCPFile(results, startingKey=1):
+	"""
+	Write cache results to BCP file
+	"""
+	fp = open(BCP_FILENAME, 'a')
+
+	key = startingKey
+	for result in results:
+		# add expression key
+		result.insert(0, key)
+		
+		# add creation and modification date
+		result.append(CDATE)
+		result.append(CDATE)
+
+		fp.write('%s%s' % (COLDL.join([_sanitizeBCP(c) for c in result]), LINEDL) )
+
+		key += 1
+
+
+	fp.close()
+		
 
 ### Single Assay Processing Methods ###
 
@@ -447,14 +530,46 @@ def updateSingleAssay(assayKey):
 	"""
 
 	# check for either gel data or insitu data
-	insituResults = _fetchInsituResults(assayKey=assayKey)
-	gelResults = _fetchGelResults(assayKey=assayKey)
-	
-	# pick the set with data
-	results = insituResults or gelResults
+	# fetch the appropriate database results
+	# merge them into groups by unique cache keys
+	#	e.g. _result_key + _structure_key for insitus
+	resultGroups = []
+	if _fetchIsAssayGel(assayKey):
+		dbResults = _fetchGelResults(assayKey=assayKey)
+		# group/merge the database results
+		resultGroups = mergeGelResults(dbResults)
+	else:
+		dbResults = _fetchInsituResults(assayKey=assayKey)
+		# group/merge the database results
+		resultGroups = mergeInsituResults(dbResults)
+
+	# use groups of DB results to compute cache columns
+	# and create the actual cache records
+	results = generateCacheResults(resultGroups)
 	
 	# perform live update on found results
 	_updateExpressionCache(assayKey, results)
+
+def _fetchIsAssayGel(assayKey):
+	"""
+	Query database to check if assay is
+	a gel type assay
+	"""
+
+	isgelSql = '''
+	    select t.isgelassay
+	    from gxd_assay a
+		join
+		gxd_assaytype t on
+			t._assaytype_key = a._assaytype_key
+	    where _assay_key = %s
+	''' % assayKey
+	results = db.sql(isgelSql, 'auto')
+
+	isgel = db.sql(isgelSql, 'auto')[0]['isgelassay']
+
+	return isgel
+	
 
 def _updateExpressionCache(assayKey, results):
 	"""
@@ -471,15 +586,14 @@ def _updateExpressionCache(assayKey, results):
 	db.sql(deleteSql, None)
 	db.commit()
 
-	maxKey = db.sql('''select max(_expression_key) as maxkey from %s''' % TABLE, 
-		'auto')[0]['maxkey']
+	maxKey = _fetchMaxExpressionKey()
 
 	# insert new results
 	for result in results:
 		maxKey += 1
 		result.insert(0, maxKey)
 
-		insertSql = INSERT_SQL % tuple([_sanitize(c) for c in result])
+		insertSql = INSERT_SQL % tuple([_sanitizeInsert(c) for c in result])
 
 		db.sql(insertSql, None)
 
