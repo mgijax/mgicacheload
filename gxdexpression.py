@@ -256,6 +256,83 @@ def mergeInsituResults(dbResults):
 
 	return results
 
+def _fetchGelResults(assayKey=None):
+	"""
+	Load Gel (Blot) results from DB
+	returns results
+	"""
+	
+	# first fetch gel data from DB
+	gelSql = '''
+	select 
+		a._assay_key,
+		a._refs_key,
+		a._assaytype_key,
+		gl._genotype_key,
+		a._marker_key,
+		gls._structure_key,
+		strength.strength,
+		gl.age,
+		gl.agemin,
+		gl.agemax,
+		gl._gellane_key,
+		gl.sex,
+		gb._gelband_key,
+		ip._imagepane_key,
+		i._image_key,
+		i.xDim as image_xdim,
+		reporter.term reportergene
+	from gxd_assay a 
+		join
+		gxd_gellane gl on
+			gl._assay_key = a._assay_key
+		join
+		gxd_gellanestructure gls on
+			gls._gellane_key = gl._gellane_key
+		join
+		gxd_gelband gb on
+			gb._gellane_key = gl._gellane_key
+		join
+		gxd_strength strength on
+			strength._strength_key = gb._strength_key
+		left outer join
+		img_imagepane ip on
+			ip._imagepane_key = a._imagepane_key
+		left outer join
+		img_image i on 
+			i._image_key = ip._image_key
+		left outer join
+		voc_term reporter on
+			reporter._term_key = a._reportergene_key
+	'''
+
+	if assayKey:
+		gelSql += '\nwhere a._assay_key = %d' % assayKey
+
+	results = db.sql(gelSql, 'auto')
+
+	results = mergeGelResults(results)
+
+	return results
+
+def mergeGelResults(dbResults):
+	"""
+	processes the results from database
+	and transforms them into cache records
+	"""
+	results = []
+	resultMap = {}
+
+	# group database results by cache uniqueness
+	for dbResult in dbResults:
+		key = (dbResult['_gelband_key'], 
+			dbResult['_structure_key'])
+		resultMap.setdefault(key, []).append(dbResult)
+
+	results = generateCacheResults(resultMap.values())
+
+	return results
+
 def generateCacheResults(dbResultGroups):
 	"""
 	transforms groups of database results
@@ -346,14 +423,6 @@ def computeHasImage(dbResults):
 		    and r['image_xdim']:
 			hasimage = 1
 	return hasimage
-
-
-def _fetchGelResults(assayKey=None):
-	"""
-	Load Gel (Blot) results from DB
-	returns results
-	"""
-	return []
 
 def _sanitize(col):
 	if col==None:
