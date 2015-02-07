@@ -56,8 +56,15 @@ except:
 COLDL = '|'
 LINEDL = '\n'
 TABLE = 'GXD_Expression'
+
+# current date
 CDATE = mgi_utils.date("%m/%d/%Y")
+
+# BCP file to write to in full laod mode
 BCP_FILENAME = outDir + '/%s.bcp' % TABLE
+
+# number of assays to process at a time in full load mode
+ASSAY_BATCH_SIZE = 1000
 
 # order of fields
 INSERT_SQL = 'insert into GXD_Expression (%s) values (%s)' % \
@@ -394,6 +401,7 @@ def computeExpressedFlag(dbResults):
 	"""
 	compute an expressed flag
 	based on a group of database results	
+	@unittested
 	"""
 	expressed = 0
 	for r in dbResults:
@@ -406,6 +414,7 @@ def computeIsForGxd(dbResults):
 	"""
 	compute an isforgxd flag
 	based on a group of database results	
+	@unittested
 	"""
 	isforgxd = 0
 	if dbResults  \
@@ -418,6 +427,7 @@ def computeIsRecombinase(dbResults):
 	"""
 	compute an isrecombinase flag
 	based on a group of database results	
+	@unittested
 	"""
 	isrecombinase = 0
 	if dbResults:
@@ -434,6 +444,7 @@ def computeHasImage(dbResults):
 	"""
 	compute a hasimage flag
 	based on a group of database results	
+	@unittested
 	"""
 	hasimage = 0
 	for r in dbResults:
@@ -442,16 +453,6 @@ def computeHasImage(dbResults):
 		    and r['image_xdim']:
 			hasimage = 1
 	return hasimage
-
-def _sanitizeInsert(col):
-	if col==None:
-		return 'NULL'
-	return col
-
-def _sanitizeBCP(col):
-	if col==None:
-		return ''
-	return str(col)
 
 ### Full Load Processing Methods ###
 
@@ -469,7 +470,7 @@ def createFullBCPFile():
 	maxAssayKey = _fetchMaxAssayKey()
 
 	# batches of assays to process at a time
-	batchSize = 1000
+	batchSize = ASSAY_BATCH_SIZE
 
 	numBatches = (maxAssayKey / batchSize) + 1
 
@@ -520,6 +521,11 @@ def _writeToBCPFile(results, startingKey=1):
 
 
 	fp.close()
+
+def _sanitizeBCP(col):
+	if col==None:
+		return ''
+	return str(col)
 		
 
 ### Single Assay Processing Methods ###
@@ -598,6 +604,12 @@ def _updateExpressionCache(assayKey, results):
 		db.sql(insertSql, None)
 
 	db.commit()
+
+def _sanitizeInsert(col):
+	if col==None:
+		return 'NULL'
+	return col
+
 
 
 if __name__ == '__main__':
