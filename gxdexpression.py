@@ -264,22 +264,6 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 	print "got %d results" % len(results)
 	return results
 
-def mergeInsituResults(dbResults):
-	"""
-	groups the results from database
-	by uniqueness of cache fields,
-	returns list result groups
-	"""
-	resultMap = {}
-
-	# group database results by cache uniqueness
-	for dbResult in dbResults:
-		key = (dbResult['_specimen_key'], 
-			dbResult['_structure_key'])
-		resultMap.setdefault(key, []).append(dbResult)
-
-	return resultMap.values()
-
 def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 	"""
 	Load Gel (Blot) results from DB
@@ -343,23 +327,43 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 
 	return results
 
+def groupResultsBy(dbResults, columns):
+	"""
+	groups the database results
+	by specified list of columns
+	returns dictionary of columns to results
+	"""
+	resultMap = {}
+
+	# group database results by cache uniqueness
+	for dbResult in dbResults:
+		if len(columns) == 1:
+			key = dbResult[columns[0]]
+		else:
+			key = tuple(dbResult[k] for k in columns)
+		resultMap.setdefault(key, []).append(dbResult)
+
+	return resultMap
+
+
+def mergeInsituResults(dbResults):
+	"""
+	groups the results from database
+	by uniqueness of cache fields,
+	returns list result groups
+	"""
+
+	return groupResultsBy(dbResults, ['_specimen_key','_structure_key']).values()
+
 def mergeGelResults(dbResults):
 	"""
 	groups the results from database
 	by uniqueness of cache fields,
 	returns list result groups
 	"""
-	resultMap = {}
+	return groupResultsBy(dbResults, ['_gellane_key','_structure_key']).values()
 
-	# group database results by cache uniqueness
-	for dbResult in dbResults:
-		key = (dbResult['_gellane_key'], 
-			dbResult['_structure_key'])
-		resultMap.setdefault(key, []).append(dbResult)
-
-	return resultMap.values()
-
-def generateCacheResults(dbResultGroups):
+def generateCacheResults(dbResultGroups, assayResultMap):
 	"""
 	transforms groups of database results
 	returns list of cache records
@@ -368,15 +372,19 @@ def generateCacheResults(dbResultGroups):
 	results = []
 	for group in dbResultGroups:
 
+		# pick one row to represent this cache result
+		rep = group[0]
+
+		allResultsForAssay = assayResultMap[rep['_assay_key']]
+
 		# compute extra cache fields
 
 		expressed = computeExpressedFlag(group)
 		isforgxd = computeIsForGxd(group)
 		isrecombinase = computeIsRecombinase(group)
-		hasimage = computeHasImage(group)
 
-		# pick one row to represent this cache result
-		rep = group[0]
+		# compute fields associated with entire assay
+		hasimage = computeHasImage(allResultsForAssay)
 
 		results.append([
 			rep['_assay_key'],
@@ -403,12 +411,11 @@ def computeExpressedFlag(dbResults):
 	based on a group of database results	
 	@unittested
 	"""
-	expressed = 0
 	for r in dbResults:
 		if r['strength'] not in ['Absent', 'Not Applicable']:
-			expressed = 1
+			return 1
 			
-	return expressed
+	return 0
 
 def computeIsForGxd(dbResults):
 	"""
@@ -416,12 +423,11 @@ def computeIsForGxd(dbResults):
 	based on a group of database results	
 	@unittested
 	"""
-	isforgxd = 0
 	if dbResults  \
 	    and dbResults[0]['_assaytype_key'] not in [10,11]:
-		isforgxd = 1
+		return 1
 
-	return isforgxd
+	return 0
 
 def computeIsRecombinase(dbResults):
 	"""
@@ -429,16 +435,15 @@ def computeIsRecombinase(dbResults):
 	based on a group of database results	
 	@unittested
 	"""
-	isrecombinase = 0
 	if dbResults:
 		if dbResults[0]['_assaytype_key'] in [10,11]:
-			isrecombinase = 1
+			return 1
 		
 		if dbResults[0]['_assaytype_key'] == 9 \
 		    and dbResults[0]['reportergene'] in ['Cre', 'FLP']:
-			isrecombinase = 1
+			return 1
 
-	return isrecombinase
+	return 0
 
 def computeHasImage(dbResults):
 	"""
@@ -446,13 +451,12 @@ def computeHasImage(dbResults):
 	based on a group of database results	
 	@unittested
 	"""
-	hasimage = 0
 	for r in dbResults:
 		if r['_imagepane_key'] \
 		    and r['_image_key'] \
 		    and r['image_xdim']:
-			hasimage = 1
-	return hasimage
+			return 1
+	return 0
 
 ### Full Load Processing Methods ###
 
@@ -484,15 +488,17 @@ def createFullBCPFile():
 		# get insitu results
 		dbResults = _fetchInsituResults(startKey=startKey, endKey=endKey)
 		resultGroups = mergeInsituResults(dbResults)
+		assayResultMap = groupResultsBy(dbResults, ['_assay_key'])
 
 		
 		# get gel results
 		dbResults = _fetchGelResults(startKey=startKey, endKey=endKey)
 		resultGroups.extend(mergeGelResults(dbResults))
+		assayResultMap.update(groupResultsBy(dbResults, ['_assay_key']))
 
 		# use groups of DB results to compute cache columns
 		# and create the actual cache records
-		results = generateCacheResults(resultGroups)
+		results = generateCacheResults(resultGroups, assayResultMap)
 
 		# write/append found results to BCP file
 		_writeToBCPFile(results, startingKey=startingCacheKey)
@@ -539,6 +545,7 @@ def updateSingleAssay(assayKey):
 	# fetch the appropriate database results
 	# merge them into groups by unique cache keys
 	#	e.g. _result_key + _structure_key for insitus
+	dbResults = []
 	resultGroups = []
 	if _fetchIsAssayGel(assayKey):
 		dbResults = _fetchGelResults(assayKey=assayKey)
@@ -551,7 +558,8 @@ def updateSingleAssay(assayKey):
 
 	# use groups of DB results to compute cache columns
 	# and create the actual cache records
-	results = generateCacheResults(resultGroups)
+	assayResultMap = {assayKey: dbResults}
+	results = generateCacheResults(resultGroups, assayResultMap)
 	
 	# perform live update on found results
 	_updateExpressionCache(assayKey, results)

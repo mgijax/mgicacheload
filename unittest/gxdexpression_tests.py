@@ -148,6 +148,25 @@ class GxdExpressionCacheTest(unittest.TestCase):
 			{'_imagepane_key':None, '_image_key':None, 'image_xdim':None}]
 		hasImage = gxdexpression.computeHasImage(results)
 		self.assertEquals(1, hasImage)
+
+	#test groupResultsBy
+	def test_groupResultsBy_one_key(self):
+		r1 = {'_assay_key':1,'_result_key':1}
+		r2 = {'_assay_key':1,'_result_key':2}
+		r3 = {'_assay_key':2,'_result_key':3}
+		results = [r1,r2,r3]
+
+		actual = gxdexpression.groupResultsBy(results, ['_assay_key'])
+		self.assertEquals({1:[r1,r2], 2:[r3]}, actual)
+	
+	def test_groupResultsBy_many_key(self):
+		r1 = {'_assay_key':1,'_result_key':1}
+		r2 = {'_assay_key':1,'_result_key':2}
+		r3 = {'_assay_key':2,'_result_key':3}
+		results = [r1,r2,r3]
+
+		actual = gxdexpression.groupResultsBy(results, ['_assay_key', '_result_key'])
+		self.assertEquals({(1,1):[r1], (1,2):[r2], (2,3):[r3]}, actual)
 		
 
 if __name__ == '__main__':
