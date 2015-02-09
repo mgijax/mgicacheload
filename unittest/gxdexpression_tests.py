@@ -1,3 +1,4 @@
+#!/usr/local/bin/python
 #
 # Any unit tests against logic in gxdexpression.py
 #
