@@ -261,7 +261,7 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 
 	results = db.sql(insituSql, 'auto')
 
-	print "got %d results" % len(results)
+	#print "got %d results" % len(results)
 	return results
 
 def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
@@ -323,7 +323,7 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		gelSql += '\nwhere a._assay_key = %d' % assayKey
 
 	results = db.sql(gelSql, 'auto')
-	print "got %d results" % len(results)
+	#print "got %d results" % len(results)
 
 	return results
 
