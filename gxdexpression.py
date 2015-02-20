@@ -206,7 +206,53 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 	"""
 	
 	# first fetch insitu data from DB
+	where = ''
+	if startKey != None and endKey != None:
+		where = 'where a._assay_key >= %s and a._assay_key < %s' % \
+			(startKey, endKey)
+
+	elif assayKey:
+		where = 'where a._assay_key = %d' % assayKey
+
 	insituSql = '''
+	select 
+		a._assay_key,
+		a._refs_key,
+		a._assaytype_key,
+		s._genotype_key,
+		a._marker_key,
+		irs._structure_key,
+		strength.strength,
+		s.age,
+		s.agemin,
+		s.agemax,
+		s._specimen_key,
+		s.sex,
+		ir._result_key,
+		null as _imagepane_key,
+		null as _image_key,
+		null as image_xdim,
+		reporter.term reportergene
+	from gxd_assay a 
+		join
+		gxd_specimen s on
+			s._assay_key = a._assay_key
+		join
+		gxd_insituresult ir on
+			ir._specimen_key = s._specimen_key
+		join
+		gxd_strength strength on
+			strength._strength_key = ir._strength_key
+		join
+		gxd_isresultstructure irs on
+			irs._result_key = ir._result_key
+		left outer join
+		voc_term reporter on
+			reporter._term_key = a._reportergene_key
+	%s
+		and not exists (select 1 from gxd_insituresultimage iri
+			where iri._result_key = ir._result_key)
+	UNION
 	select 
 		a._assay_key,
 		a._refs_key,
@@ -238,26 +284,20 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		join
 		gxd_isresultstructure irs on
 			irs._result_key = ir._result_key
-		left outer join
+		join
 		gxd_insituresultimage iri on
 			iri._result_key = ir._result_key
-		left outer join
+		join
 		img_imagepane ip on
 			ip._imagepane_key = iri._imagepane_key
-		left outer join
+		join
 		img_image i on 
 			i._image_key = ip._image_key
 		left outer join
 		voc_term reporter on
 			reporter._term_key = a._reportergene_key
-	'''
-
-	if startKey != None and endKey != None:
-		insituSql += '\nwhere a._assay_key >= %s and a._assay_key < %s' % \
-			(startKey, endKey)
-
-	elif assayKey:
-		insituSql += '\nwhere a._assay_key = %d' % assayKey
+	%s
+	''' % (where, where)
 
 	results = db.sql(insituSql, 'auto')
 
@@ -271,7 +311,53 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 	"""
 	
 	# first fetch gel data from DB
+	where = ''
+	if startKey != None and endKey != None:
+		where =  'where a._assay_key >= %s and a._assay_key < %s' % \
+			(startKey, endKey)
+
+	elif assayKey:
+		where = 'where a._assay_key = %d' % assayKey
+
 	gelSql = '''
+	select 
+		a._assay_key,
+		a._refs_key,
+		a._assaytype_key,
+		gl._genotype_key,
+		a._marker_key,
+		gls._structure_key,
+		strength.strength,
+		gl.age,
+		gl.agemin,
+		gl.agemax,
+		gl._gellane_key,
+		gl.sex,
+		gb._gelband_key,
+		null as _imagepane_key,
+		null as _image_key,
+		null as image_xdim,
+		reporter.term reportergene
+	from gxd_assay a 
+		join
+		gxd_gellane gl on (
+			gl._assay_key = a._assay_key
+			and gl._gelcontrol_key = 1
+		) join
+		gxd_gellanestructure gls on
+			gls._gellane_key = gl._gellane_key
+		join
+		gxd_gelband gb on
+			gb._gellane_key = gl._gellane_key
+		join
+		gxd_strength strength on
+			strength._strength_key = gb._strength_key
+		left outer join
+		voc_term reporter on
+			reporter._term_key = a._reportergene_key
+	%s
+		and a._imagepane_key is null
+	UNION
 	select 
 		a._assay_key,
 		a._refs_key,
@@ -304,23 +390,18 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		join
 		gxd_strength strength on
 			strength._strength_key = gb._strength_key
-		left outer join
+		join
 		img_imagepane ip on
 			ip._imagepane_key = a._imagepane_key
-		left outer join
+		join
 		img_image i on 
 			i._image_key = ip._image_key
 		left outer join
 		voc_term reporter on
 			reporter._term_key = a._reportergene_key
-	'''
+	%s	
+	''' % (where, where)
 
-	if startKey != None and endKey != None:
-		gelSql += '\nwhere a._assay_key >= %s and a._assay_key < %s' % \
-			(startKey, endKey)
-
-	elif assayKey:
-		gelSql += '\nwhere a._assay_key = %d' % assayKey
 
 	results = db.sql(gelSql, 'auto')
 	#print "got %d results" % len(results)
