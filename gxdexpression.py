@@ -199,6 +199,66 @@ def _fetchMaxAssayKey():
 	return db.sql('''select max(_assay_key) as maxkey from gxd_assay''', 
 		'auto')[0]['maxkey'] or 1
 
+def _initEmapsTempTable(assayKey=None):
+	"""
+	Create the emaps_temp table
+	for mapping AD structure keys to emaps
+	"""
+	
+	emapsTemp = '''
+	select distinct accs._object_key as _structure_key,
+		acce._object_key as _emaps_key
+	into #emaps_temp
+	from acc_accession accs
+	left outer join mgi_emaps_mapping em on
+		em.accid=accs.accid
+	left outer join acc_accession acce on
+		acce.accid=em.emapsid
+		and acce._mgitype_key = 13
+	where	accs._mgitype_key = 38
+	'''
+	if assayKey:
+		emapsTemp = '''
+		select accs._object_key as _structure_key,
+			acce._object_key as _emaps_key
+		into #emaps_temp
+		from acc_accession accs
+		left outer join mgi_emaps_mapping em on
+			em.accid=accs.accid
+		left outer join acc_accession acce on
+			acce.accid=em.emapsid
+			and acce._mgitype_key = 13
+		where	accs._mgitype_key = 38
+			and  exists (
+			    select 1 from gxd_isresultstructure irs
+			    join gxd_insituresult ir on
+				    ir._result_key=irs._result_key
+			    join gxd_specimen s on
+				    s._specimen_key=ir._specimen_key
+			    where irs._structure_key=accs._object_key
+				    and s._assay_key = %d
+			)
+		UNION
+		select accs._object_key as _structure_key,
+			acce._object_key as _emaps_key
+		from acc_accession accs
+		left outer join mgi_emaps_mapping em on
+			em.accid=accs.accid
+		left outer join acc_accession acce on
+			acce.accid=em.emapsid
+			and acce._mgitype_key = 13
+		where	accs._mgitype_key = 38
+		    	and exists (
+			    select 1 from gxd_gellanestructure gls
+			    join gxd_gellane gl on
+				    gl._gellane_key=gls._gellane_key
+			    where gls._structure_key=accs._object_key
+				    and gl._assay_key = %d
+			)
+		''' % (assayKey, assayKey)
+	db.sql(emapsTemp, None)
+	db.sql('create index emaps_struct_idx on #emaps_temp (_structure_key)', None)
+
 def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 	"""
 	Load Insitu results from DB
@@ -229,48 +289,11 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		s._specimen_key,
 		s.sex,
 		ir._result_key,
-		null as _imagepane_key,
-		null as _image_key,
-		null as image_xdim,
-		reporter.term reportergene
-	from gxd_assay a 
-		join
-		gxd_specimen s on
-			s._assay_key = a._assay_key
-		join
-		gxd_insituresult ir on
-			ir._specimen_key = s._specimen_key
-		join
-		gxd_strength strength on
-			strength._strength_key = ir._strength_key
-		join
-		gxd_isresultstructure irs on
-			irs._result_key = ir._result_key
-		left outer join
-		voc_term reporter on
-			reporter._term_key = a._reportergene_key
-	%s
-		and not exists (select 1 from gxd_insituresultimage iri
-			where iri._result_key = ir._result_key)
-	UNION
-	select 
-		a._assay_key,
-		a._refs_key,
-		a._assaytype_key,
-		s._genotype_key,
-		a._marker_key,
-		irs._structure_key,
-		strength.strength,
-		s.age,
-		s.agemin,
-		s.agemax,
-		s._specimen_key,
-		s.sex,
-		ir._result_key,
 		ip._imagepane_key,
 		i._image_key,
 		i.xDim as image_xdim,
-		reporter.term reportergene
+		reporter.term reportergene,
+		et._emaps_key
 	from gxd_assay a 
 		join
 		gxd_specimen s on
@@ -285,19 +308,22 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		gxd_isresultstructure irs on
 			irs._result_key = ir._result_key
 		join
+		#emaps_temp et on
+			et._structure_key = irs._structure_key	
+		left outer join
 		gxd_insituresultimage iri on
 			iri._result_key = ir._result_key
-		join
+		left outer join
 		img_imagepane ip on
 			ip._imagepane_key = iri._imagepane_key
-		join
+		left outer join
 		img_image i on 
 			i._image_key = ip._image_key
 		left outer join
 		voc_term reporter on
 			reporter._term_key = a._reportergene_key
 	%s
-	''' % (where, where)
+	''' % (where)
 
 	results = db.sql(insituSql, 'auto')
 
@@ -334,10 +360,11 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		gl._gellane_key,
 		gl.sex,
 		gb._gelband_key,
-		null as _imagepane_key,
-		null as _image_key,
-		null as image_xdim,
-		reporter.term reportergene
+		ip._imagepane_key,
+		i._image_key,
+		i.xDim as image_xdim,
+		reporter.term reportergene,
+		et._emaps_key
 	from gxd_assay a 
 		join
 		gxd_gellane gl on (
@@ -346,6 +373,9 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		) join
 		gxd_gellanestructure gls on
 			gls._gellane_key = gl._gellane_key
+		join
+		#emaps_temp et on
+			et._structure_key = gls._structure_key
 		join
 		gxd_gelband gb on
 			gb._gellane_key = gl._gellane_key
@@ -353,54 +383,16 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		gxd_strength strength on
 			strength._strength_key = gb._strength_key
 		left outer join
-		voc_term reporter on
-			reporter._term_key = a._reportergene_key
-	%s
-		and a._imagepane_key is null
-	UNION
-	select 
-		a._assay_key,
-		a._refs_key,
-		a._assaytype_key,
-		gl._genotype_key,
-		a._marker_key,
-		gls._structure_key,
-		strength.strength,
-		gl.age,
-		gl.agemin,
-		gl.agemax,
-		gl._gellane_key,
-		gl.sex,
-		gb._gelband_key,
-		ip._imagepane_key,
-		i._image_key,
-		i.xDim as image_xdim,
-		reporter.term reportergene
-	from gxd_assay a 
-		join
-		gxd_gellane gl on (
-			gl._assay_key = a._assay_key
-			and gl._gelcontrol_key = 1
-		) join
-		gxd_gellanestructure gls on
-			gls._gellane_key = gl._gellane_key
-		join
-		gxd_gelband gb on
-			gb._gellane_key = gl._gellane_key
-		join
-		gxd_strength strength on
-			strength._strength_key = gb._strength_key
-		join
 		img_imagepane ip on
 			ip._imagepane_key = a._imagepane_key
-		join
+		left outer join
 		img_image i on 
 			i._image_key = ip._image_key
 		left outer join
 		voc_term reporter on
 			reporter._term_key = a._reportergene_key
 	%s	
-	''' % (where, where)
+	''' % (where)
 
 
 	results = db.sql(gelSql, 'auto')
@@ -474,7 +466,7 @@ def generateCacheResults(dbResultGroups, assayResultMap):
 			rep['_genotype_key'],
 			rep['_marker_key'],
 			rep['_structure_key'],
-			None, # emaps_key
+			rep['_emaps_key'],
 			expressed,
 			rep['age'],
 			rep['agemin'],
@@ -559,6 +551,8 @@ def createFullBCPFile():
 
 	numBatches = (maxAssayKey / batchSize) + 1
 
+	_initEmapsTempTable()
+
 	startingCacheKey = 1
 	for i in range(numBatches):
 		startKey = i * batchSize
@@ -626,6 +620,9 @@ def updateSingleAssay(assayKey):
 	# fetch the appropriate database results
 	# merge them into groups by unique cache keys
 	#	e.g. _result_key + _structure_key for insitus
+
+	_initEmapsTempTable(assayKey)
+
 	dbResults = []
 	resultGroups = []
 	if _fetchIsAssayGel(assayKey):
