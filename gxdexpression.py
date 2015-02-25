@@ -66,43 +66,31 @@ BCP_FILENAME = outDir + '/%s.bcp' % TABLE
 # number of assays to process at a time in full load mode
 ASSAY_BATCH_SIZE = 1000
 
+CACHE_FIELDS = [
+	('_expression_key','%s'),
+	('_assay_key','%s'),
+	('_refs_key','%s'),
+	('_assaytype_key','%s'),
+	('_genotype_key','%s'),
+	('_marker_key','%s'),
+	('_structure_key','%s'),
+	('_emaps_key','%s'),
+	('_specimen_key','%s'),
+	('_gellane_key','%s'),
+	('expressed','%s'),
+	('age','\'%s\''),
+	('agemin','%s'),
+	('agemax','%s'),
+	('isrecombinase','%s'),
+	('isforgxd','%s'),
+	('hasimage','%s')
+]
+
 # order of fields
 INSERT_SQL = 'insert into GXD_Expression (%s) values (%s)' % \
 	(
-	','.join([
-		'_expression_key',
-		'_assay_key',
-		'_refs_key',
-		'_assaytype_key',
-		'_genotype_key',
-		'_marker_key',
-		'_structure_key',
-		'_emaps_key',
-		'expressed',
-		'age',
-		'agemin',
-		'agemax',
-		'isrecombinase',
-		'isforgxd',
-		'hasimage'
-	]),
-	','.join([
-		'%s', # _expression_key
-		'%s', # _assay_key
-		'%s', # _refs_key
-		'%s', # _assaytype_key
-		'%s', # _genotype_key
-		'%s', # _marker_key
-		'%s', # _structure_key
-		'%s', # _emaps_key
-		'%s', # expressed
-		'\'%s\'', # age
-		'%s', # agemin
-		'%s', # agemax
-		'%s', # isrecombinase
-		'%s', # isforgxd
-		'%s' # hasimage
-	])
+	','.join([x[0] for x in CACHE_FIELDS]),
+	','.join([x[1] for x in CACHE_FIELDS])
 )
 
 ### Methods ###
@@ -204,58 +192,61 @@ def _initEmapsTempTable(assayKey=None):
 	Create the emaps_temp table
 	for mapping AD structure keys to emaps
 	"""
+
+	emapsSelect = '''
+	select distinct accs._object_key as _structure_key,
+                acce._object_key as _emaps_key
+	'''
+
+	emapsFrom = '''
+	from acc_accession accs
+        left outer join mgi_emaps_mapping em on
+                em.accid=accs.accid
+        left outer join acc_accession acce on
+                acce.accid=em.emapsid
+                and acce._mgitype_key = 13
+	'''
+
+	emapsWhere = '''
+	where   accs._mgitype_key = 38
+		and accs.preferred = 1
+		and accs._logicaldb_key = 1
+	'''
 	
 	emapsTemp = '''
-	select distinct accs._object_key as _structure_key,
-		acce._object_key as _emaps_key
+	%s
 	into #emaps_temp
-	from acc_accession accs
-	left outer join mgi_emaps_mapping em on
-		em.accid=accs.accid
-	left outer join acc_accession acce on
-		acce.accid=em.emapsid
-		and acce._mgitype_key = 13
-	where	accs._mgitype_key = 38
-	'''
+	%s
+	%s
+	''' % (emapsSelect, emapsFrom, emapsWhere)
 	if assayKey:
 		emapsTemp = '''
-		select accs._object_key as _structure_key,
-			acce._object_key as _emaps_key
+		%s
 		into #emaps_temp
-		from acc_accession accs
-		left outer join mgi_emaps_mapping em on
-			em.accid=accs.accid
-		left outer join acc_accession acce on
-			acce.accid=em.emapsid
-			and acce._mgitype_key = 13
-		where	accs._mgitype_key = 38
-			and  exists (
-			    select 1 from gxd_isresultstructure irs
-			    join gxd_insituresult ir on
-				    ir._result_key=irs._result_key
-			    join gxd_specimen s on
-				    s._specimen_key=ir._specimen_key
-			    where irs._structure_key=accs._object_key
-				    and s._assay_key = %d
-			)
+		%s
+		%s
+		    and  exists (
+			select 1 from gxd_isresultstructure irs
+			join gxd_insituresult ir on
+				ir._result_key=irs._result_key
+			join gxd_specimen s on
+				s._specimen_key=ir._specimen_key
+			where irs._structure_key=accs._object_key
+				and s._assay_key = %d
+		    )
 		UNION
-		select accs._object_key as _structure_key,
-			acce._object_key as _emaps_key
-		from acc_accession accs
-		left outer join mgi_emaps_mapping em on
-			em.accid=accs.accid
-		left outer join acc_accession acce on
-			acce.accid=em.emapsid
-			and acce._mgitype_key = 13
-		where	accs._mgitype_key = 38
-		    	and exists (
-			    select 1 from gxd_gellanestructure gls
-			    join gxd_gellane gl on
-				    gl._gellane_key=gls._gellane_key
-			    where gls._structure_key=accs._object_key
-				    and gl._assay_key = %d
-			)
-		''' % (assayKey, assayKey)
+		%s
+		%s
+		%s
+		    and exists (
+			select 1 from gxd_gellanestructure gls
+			join gxd_gellane gl on
+				gl._gellane_key=gls._gellane_key
+			where gls._structure_key=accs._object_key
+				and gl._assay_key = %d
+		    )
+		''' % (emapsSelect, emapsFrom, emapsWhere, assayKey, \
+			emapsSelect, emapsFrom, emapsWhere, assayKey)
 	db.sql(emapsTemp, None)
 	db.sql('create index emaps_struct_idx on #emaps_temp (_structure_key)', None)
 
@@ -459,6 +450,12 @@ def generateCacheResults(dbResultGroups, assayResultMap):
 		# compute fields associated with entire assay
 		hasimage = computeHasImage(allResultsForAssay)
 
+		# check specimen key
+		_specimen_key = rep.has_key('_specimen_key')  and rep['_specimen_key'] or None
+
+		# check gellane key
+		_gellane_key = rep.has_key('_gellane_key')  and rep['_gellane_key'] or None
+
 		results.append([
 			rep['_assay_key'],
 			rep['_refs_key'],
@@ -467,6 +464,8 @@ def generateCacheResults(dbResultGroups, assayResultMap):
 			rep['_marker_key'],
 			rep['_structure_key'],
 			rep['_emaps_key'],
+			_specimen_key,
+			_gellane_key,
 			expressed,
 			rep['age'],
 			rep['agemin'],
@@ -656,9 +655,10 @@ def _fetchIsAssayGel(assayKey):
 			t._assaytype_key = a._assaytype_key
 	    where _assay_key = %s
 	''' % assayKey
-	results = db.sql(isgelSql, 'auto')
-
-	isgel = db.sql(isgelSql, 'auto')[0]['isgelassay']
+	results = db.sql(isgelSql, 'auto')	
+	isgel = 0
+	if results:
+	    isgel = results[0]['isgelassay']
 
 	return isgel
 	
