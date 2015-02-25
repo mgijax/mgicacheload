@@ -615,6 +615,8 @@ def updateSingleAssay(assayKey):
 	Updates cache with all results for specified assayKey
 	"""
 
+	db.sql('begin transaction', None)
+
 	# check for either gel data or insitu data
 	# fetch the appropriate database results
 	# merge them into groups by unique cache keys
@@ -640,6 +642,8 @@ def updateSingleAssay(assayKey):
 	
 	# perform live update on found results
 	_updateExpressionCache(assayKey, results)
+
+	db.sql('commit transaction', None)
 
 def _fetchIsAssayGel(assayKey):
 	"""
