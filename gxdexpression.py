@@ -66,43 +66,31 @@ BCP_FILENAME = outDir + '/%s.bcp' % TABLE
 # number of assays to process at a time in full load mode
 ASSAY_BATCH_SIZE = 1000
 
+CACHE_FIELDS = [
+	('_expression_key','%s'),
+	('_assay_key','%s'),
+	('_refs_key','%s'),
+	('_assaytype_key','%s'),
+	('_genotype_key','%s'),
+	('_marker_key','%s'),
+	('_structure_key','%s'),
+	('_emaps_key','%s'),
+	('_specimen_key','%s'),
+	('_gellane_key','%s'),
+	('expressed','%s'),
+	('age','\'%s\''),
+	('agemin','%s'),
+	('agemax','%s'),
+	('isrecombinase','%s'),
+	('isforgxd','%s'),
+	('hasimage','%s')
+]
+
 # order of fields
 INSERT_SQL = 'insert into GXD_Expression (%s) values (%s)' % \
 	(
-	','.join([
-		'_expression_key',
-		'_assay_key',
-		'_refs_key',
-		'_assaytype_key',
-		'_genotype_key',
-		'_marker_key',
-		'_structure_key',
-		'_emaps_key',
-		'expressed',
-		'age',
-		'agemin',
-		'agemax',
-		'isrecombinase',
-		'isforgxd',
-		'hasimage'
-	]),
-	','.join([
-		'%s', # _expression_key
-		'%s', # _assay_key
-		'%s', # _refs_key
-		'%s', # _assaytype_key
-		'%s', # _genotype_key
-		'%s', # _marker_key
-		'%s', # _structure_key
-		'%s', # _emaps_key
-		'%s', # expressed
-		'\'%s\'', # age
-		'%s', # agemin
-		'%s', # agemax
-		'%s', # isrecombinase
-		'%s', # isforgxd
-		'%s' # hasimage
-	])
+	','.join([x[0] for x in CACHE_FIELDS]),
+	','.join([x[1] for x in CACHE_FIELDS])
 )
 
 ### Methods ###
@@ -199,6 +187,69 @@ def _fetchMaxAssayKey():
 	return db.sql('''select max(_assay_key) as maxkey from gxd_assay''', 
 		'auto')[0]['maxkey'] or 1
 
+def _initEmapsTempTable(assayKey=None):
+	"""
+	Create the emaps_temp table
+	for mapping AD structure keys to emaps
+	"""
+
+	emapsSelect = '''
+	select distinct accs._object_key as _structure_key,
+                acce._object_key as _emaps_key
+	'''
+
+	emapsFrom = '''
+	from acc_accession accs
+        left outer join mgi_emaps_mapping em on
+                em.accid=accs.accid
+        left outer join acc_accession acce on
+                acce.accid=em.emapsid
+                and acce._mgitype_key = 13
+	'''
+
+	emapsWhere = '''
+	where   accs._mgitype_key = 38
+		and accs.preferred = 1
+		and accs._logicaldb_key = 1
+	'''
+	
+	emapsTemp = '''
+	%s
+	into #emaps_temp
+	%s
+	%s
+	''' % (emapsSelect, emapsFrom, emapsWhere)
+	if assayKey:
+		emapsTemp = '''
+		%s
+		into #emaps_temp
+		%s
+		%s
+		    and  exists (
+			select 1 from gxd_isresultstructure irs
+			join gxd_insituresult ir on
+				ir._result_key=irs._result_key
+			join gxd_specimen s on
+				s._specimen_key=ir._specimen_key
+			where irs._structure_key=accs._object_key
+				and s._assay_key = %d
+		    )
+		UNION
+		%s
+		%s
+		%s
+		    and exists (
+			select 1 from gxd_gellanestructure gls
+			join gxd_gellane gl on
+				gl._gellane_key=gls._gellane_key
+			where gls._structure_key=accs._object_key
+				and gl._assay_key = %d
+		    )
+		''' % (emapsSelect, emapsFrom, emapsWhere, assayKey, \
+			emapsSelect, emapsFrom, emapsWhere, assayKey)
+	db.sql(emapsTemp, None)
+	db.sql('create index emaps_struct_idx on #emaps_temp (_structure_key)', None)
+
 def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 	"""
 	Load Insitu results from DB
@@ -206,6 +257,14 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 	"""
 	
 	# first fetch insitu data from DB
+	where = ''
+	if startKey != None and endKey != None:
+		where = 'where a._assay_key >= %s and a._assay_key < %s' % \
+			(startKey, endKey)
+
+	elif assayKey:
+		where = 'where a._assay_key = %d' % assayKey
+
 	insituSql = '''
 	select 
 		a._assay_key,
@@ -224,7 +283,8 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		ip._imagepane_key,
 		i._image_key,
 		i.xDim as image_xdim,
-		reporter.term reportergene
+		reporter.term reportergene,
+		et._emaps_key
 	from gxd_assay a 
 		join
 		gxd_specimen s on
@@ -238,6 +298,9 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		join
 		gxd_isresultstructure irs on
 			irs._result_key = ir._result_key
+		join
+		#emaps_temp et on
+			et._structure_key = irs._structure_key	
 		left outer join
 		gxd_insituresultimage iri on
 			iri._result_key = ir._result_key
@@ -250,14 +313,8 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		left outer join
 		voc_term reporter on
 			reporter._term_key = a._reportergene_key
-	'''
-
-	if startKey != None and endKey != None:
-		insituSql += '\nwhere a._assay_key >= %s and a._assay_key < %s' % \
-			(startKey, endKey)
-
-	elif assayKey:
-		insituSql += '\nwhere a._assay_key = %d' % assayKey
+	%s
+	''' % (where)
 
 	results = db.sql(insituSql, 'auto')
 
@@ -271,6 +328,14 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 	"""
 	
 	# first fetch gel data from DB
+	where = ''
+	if startKey != None and endKey != None:
+		where =  'where a._assay_key >= %s and a._assay_key < %s' % \
+			(startKey, endKey)
+
+	elif assayKey:
+		where = 'where a._assay_key = %d' % assayKey
+
 	gelSql = '''
 	select 
 		a._assay_key,
@@ -289,7 +354,8 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		ip._imagepane_key,
 		i._image_key,
 		i.xDim as image_xdim,
-		reporter.term reportergene
+		reporter.term reportergene,
+		et._emaps_key
 	from gxd_assay a 
 		join
 		gxd_gellane gl on (
@@ -298,6 +364,9 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		) join
 		gxd_gellanestructure gls on
 			gls._gellane_key = gl._gellane_key
+		join
+		#emaps_temp et on
+			et._structure_key = gls._structure_key
 		join
 		gxd_gelband gb on
 			gb._gellane_key = gl._gellane_key
@@ -313,14 +382,9 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		left outer join
 		voc_term reporter on
 			reporter._term_key = a._reportergene_key
-	'''
+	%s	
+	''' % (where)
 
-	if startKey != None and endKey != None:
-		gelSql += '\nwhere a._assay_key >= %s and a._assay_key < %s' % \
-			(startKey, endKey)
-
-	elif assayKey:
-		gelSql += '\nwhere a._assay_key = %d' % assayKey
 
 	results = db.sql(gelSql, 'auto')
 	#print "got %d results" % len(results)
@@ -386,6 +450,12 @@ def generateCacheResults(dbResultGroups, assayResultMap):
 		# compute fields associated with entire assay
 		hasimage = computeHasImage(allResultsForAssay)
 
+		# check specimen key
+		_specimen_key = rep.has_key('_specimen_key')  and rep['_specimen_key'] or None
+
+		# check gellane key
+		_gellane_key = rep.has_key('_gellane_key')  and rep['_gellane_key'] or None
+
 		results.append([
 			rep['_assay_key'],
 			rep['_refs_key'],
@@ -393,7 +463,9 @@ def generateCacheResults(dbResultGroups, assayResultMap):
 			rep['_genotype_key'],
 			rep['_marker_key'],
 			rep['_structure_key'],
-			None, # emaps_key
+			rep['_emaps_key'],
+			_specimen_key,
+			_gellane_key,
 			expressed,
 			rep['age'],
 			rep['agemin'],
@@ -478,6 +550,8 @@ def createFullBCPFile():
 
 	numBatches = (maxAssayKey / batchSize) + 1
 
+	_initEmapsTempTable()
+
 	startingCacheKey = 1
 	for i in range(numBatches):
 		startKey = i * batchSize
@@ -541,12 +615,13 @@ def updateSingleAssay(assayKey):
 	Updates cache with all results for specified assayKey
 	"""
 
-	db.sql('begin transaction', None)
-
 	# check for either gel data or insitu data
 	# fetch the appropriate database results
 	# merge them into groups by unique cache keys
 	#	e.g. _result_key + _structure_key for insitus
+
+	_initEmapsTempTable(assayKey)
+
 	dbResults = []
 	resultGroups = []
 	if _fetchIsAssayGel(assayKey):
@@ -566,8 +641,6 @@ def updateSingleAssay(assayKey):
 	# perform live update on found results
 	_updateExpressionCache(assayKey, results)
 
-	db.sql('commit transaction', None)
-
 def _fetchIsAssayGel(assayKey):
 	"""
 	Query database to check if assay is
@@ -582,9 +655,10 @@ def _fetchIsAssayGel(assayKey):
 			t._assaytype_key = a._assaytype_key
 	    where _assay_key = %s
 	''' % assayKey
-	results = db.sql(isgelSql, 'auto')
-
-	isgel = db.sql(isgelSql, 'auto')[0]['isgelassay']
+	results = db.sql(isgelSql, 'auto')	
+	isgel = 0
+	if results:
+	    isgel = results[0]['isgelassay']
 
 	return isgel
 	
@@ -593,6 +667,8 @@ def _updateExpressionCache(assayKey, results):
 	"""
 	Do live update on results for assayKey
 	"""
+
+	db.sql('begin transaction', None)
 
 	# delete all cache records for assayKey
 	deleteSql = '''
@@ -617,10 +693,14 @@ def _updateExpressionCache(assayKey, results):
 
 	db.commit()
 
+	db.sql('commit transaction', None)
+
 def _sanitizeInsert(col):
 	if col==None:
 		return 'NULL'
 	return col
+
+
 
 if __name__ == '__main__':
 
