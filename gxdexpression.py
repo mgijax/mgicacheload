@@ -36,10 +36,10 @@ try:
         db.setAutoTranslateBE()
     else:
         import db
-        db.set_sqlLogFunction(db.sqlLogAll)
+        #db.set_sqlLogFunction(db.sqlLogAll)
 except:
     import db
-    db.set_sqlLogFunction(db.sqlLogAll)
+    #db.set_sqlLogFunction(db.sqlLogAll)
 
 #
 # when the EI calls this script, it is *not* sourcing ./Configuration
@@ -167,6 +167,8 @@ def process(assayKey):
 
 	# determine type of load
 	if assayKey == 0:
+  		if os.environ['DB_TYPE'] == 'sybase':
+  			db.set_sqlLogFunction(db.sqlLogAll)
 		createFullBCPFile()
 	else:
 		updateSingleAssay(assayKey)
@@ -671,11 +673,7 @@ def _updateExpressionCache(assayKey, results):
 	db.sql('begin transaction', None)
 
 	# delete all cache records for assayKey
-	deleteSql = '''
-	    delete from 
-	    %s
-	    where _assay_key = %s
-	''' % (TABLE, assayKey)
+	deleteSql = 'delete from %s where _assay_key = %s' % (TABLE, assayKey)
 	
 	db.sql(deleteSql, None)
 	db.commit()
