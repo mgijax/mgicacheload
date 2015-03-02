@@ -32,8 +32,6 @@ setenv COLDELIM		"|"
 setenv LINEDELIM	"\n"
 setenv CREATEDBY        1000
 
-setenv DB_TYPE sybase
-
 if ( ${DB_TYPE} == 'postgres' ) then
 
 setenv SCHEMADIR ${PG_MGD_DBSCHEMADIR}
