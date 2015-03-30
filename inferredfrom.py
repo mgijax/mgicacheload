@@ -68,7 +68,7 @@ else:
     import db
     db.set_sqlLogFunction(db.sqlLogAll)
 
-execSQL = 'exec ACC_insertNoChecks %d,"%s",%d,"Annotation Evidence",-1,1,1'
+execSQL = 'exec ACC_insertNoChecks 1001,%d,"%s",%d,"Annotation Evidence",-1,1,1'
 eiErrorStatus = '%s     %s     %s\n'
 
 # maps provider prefix to logical database key

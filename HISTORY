@@ -1,3 +1,10 @@
+TAG : mgicacheload-5-2-1-11
+DATE : 03/30/2015
+STAFF : lec
+CHANGES:
+1) TR11750/inferredfrom.py : changes to calls of stored procedures
+added "1001" (user key for mgd_dbo)
+
 TAG : mgicacheload-5-2-1-10
 DATE : 03/09/2015
 STAFF : lec/kstone
