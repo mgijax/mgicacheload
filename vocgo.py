@@ -48,11 +48,13 @@ def createBCPfile():
 	cacheBCP = open(outDir + '/%s.bcp' % (table), 'w')
 
 	results = db.sql('''select t._Term_key, n._DAG_key, t.term, a.accID, d.abbreviation 
-		from VOC_Term t, ACC_Accession a, VOC_VocabDAG vd, DAG_Node n, DAG_DAG d 
+		from VOC_Term t, ACC_Accession a, ACC_LogicalDB ldb, VOC_VocabDAG vd, DAG_Node n, DAG_DAG d
 		where t._Vocab_key = 4 
 		and t._Term_key = a._Object_key 
 		and a._MGIType_key = 13 
 		and a.preferred = 1 
+		and ldb._logicaldb_key = a._logicaldb_key
+		and ldb.name = 'GO'
 		and t._Vocab_key = vd._Vocab_key 
 		and t._Term_key = n._Object_key 
 		and vd._DAG_key = n._DAG_key 
