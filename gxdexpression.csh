@@ -24,11 +24,7 @@ date | tee -a ${LOG}
 
 # Create the bcp file
 echo "---Creating BCP file"
-if ( ${DB_TYPE} == "postgres" ) then
-./gxdexpression.py -S${PG_DBSERVER} -D${PG_DBNAME} -U${PG_DBUSER} -P${PG_1LINE_PASSFILE} -K${OBJECTKEY} |& tee -a ${LOG}
-else
-./gxdexpression.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} 
-endif
+./gxdexpression.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} |& tee -a ${LOG}
 
 # Exit if bcp file is empty
 echo "---Ensure BCP file is not empty"
