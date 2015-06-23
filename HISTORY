@@ -1,4 +1,9 @@
 TAG : mgicacheload-5-2-2-5
+DATE: 6/23/15
+STAFF: pf
+CHANGES: normalizing DB connection values
+
+TAG : mgicacheload-5-2-2-5
 DATE : 06/22/2015
 STAFF : kstone
 CHANGES: vocgo cache, select only logicaldb = 'GO'
