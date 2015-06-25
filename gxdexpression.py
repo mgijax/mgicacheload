@@ -27,19 +27,11 @@ import os
 import getopt
 import string
 import mgi_utils
+import db
 
-try:
-    if os.environ['DB_TYPE'] == 'postgres':
-        import pg_db
-        db = pg_db
-        db.setTrace()
-        db.setAutoTranslateBE()
-    else:
-        import db
-        #db.set_sqlLogFunction(db.sqlLogAll)
-except:
-    import db
-    #db.set_sqlLogFunction(db.sqlLogAll)
+db.setTrace()
+db.setAutoTranslate(False)
+db.setAutoTranslateBE(False)
 
 #
 # when the EI calls this script, it is *not* sourcing ./Configuration
@@ -219,14 +211,14 @@ def _initEmapsTempTable(assayKey=None):
 	
 	emapsTemp = '''
 	%s
-	into #emaps_temp
+	INTO TEMPORARY TABLE emaps_temp
 	%s
 	%s
 	''' % (emapsSelect, emapsFrom, emapsWhere)
 	if assayKey:
 		emapsTemp = '''
 		%s
-		into #emaps_temp
+		INTO TEMPORARY TABLE emaps_temp
 		%s
 		%s
 		    and  exists (
@@ -252,7 +244,7 @@ def _initEmapsTempTable(assayKey=None):
 		''' % (emapsSelect, emapsFrom, emapsWhere, assayKey, \
 			emapsSelect, emapsFrom, emapsWhere, assayKey)
 	db.sql(emapsTemp, None)
-	db.sql('create index emaps_struct_idx on #emaps_temp (_structure_key)', None)
+	db.sql('create index emaps_struct_idx on emaps_temp (_structure_key)', None)
 
 def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 	"""
@@ -303,7 +295,7 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		gxd_isresultstructure irs on
 			irs._result_key = ir._result_key
 		join
-		#emaps_temp et on
+		emaps_temp et on
 			et._structure_key = irs._structure_key	
 		left outer join
 		gxd_insituresultimage iri on
@@ -369,7 +361,7 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		gxd_gellanestructure gls on
 			gls._gellane_key = gl._gellane_key
 		join
-		#emaps_temp et on
+		emaps_temp et on
 			et._structure_key = gls._structure_key
 		join
 		gxd_gelband gb on

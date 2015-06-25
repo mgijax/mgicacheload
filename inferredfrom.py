@@ -58,20 +58,16 @@ import string
 import re
 import mgi_utils
 import accessionlib
+import db
 
 objectKey = None
 createdBy = None
 
-if os.environ['DB_TYPE'] == 'postgres':
-    import pg_db
-    db = pg_db
-    db.setTrace()
-    db.setAutoTranslateBE()
-else:
-    import db
-    db.set_sqlLogFunction(db.sqlLogAll)
+db.setTrace()
+db.setAutoTranslate(False)
+db.setAutoTranslateBE(False)
 
-execSQL = 'exec ACC_insertNoChecks 1001,%d,"%s",%d,"Annotation Evidence",-1,1,1'
+execSQL = 'select ACC_insertNoChecks (1001,%d,\'%s\',%d,\'Annotation Evidence\',-1,1,1);'
 eiErrorStatus = '%s     %s     %s\n'
 
 # maps provider prefix to logical database key
@@ -217,7 +213,7 @@ def preCache():
 	# select existing cache data
 
 	cmd = 'select a._Accession_key, a.accID, a._Object_key ' + \
-		'into #toCheck ' + \
+		'INTO TEMPORARY TABLE toCheck ' + \
 		'from ACC_Accession a, VOC_Annot v, VOC_Evidence e, MGI_User u ' + \
 		'where a._MGIType_key = 25 ' + \
 		'and v._AnnotType_key = 1000 ' + \
@@ -231,22 +227,22 @@ def preCache():
 		cmd = cmd + ' and v._Object_key = %s' % (objectKey)
 
 	elif createdBy is not None:
-		cmd = cmd + ' and u.login like "%s"' % (createdBy)
+		cmd = cmd + ' and u.login like \'%s\'' % (createdBy)
 
 	db.sql(cmd, None)
-	db.sql('create index idx1 on #toCheck(_Accession_key)', None)
+	db.sql('create index idx1 on toCheck(_Accession_key)', None)
 
 	# delete existing cache data
 
 	if objectKey >= 0 or createdBy is not None:
-		db.sql('delete from ACC_Accession \nfrom #toCheck d ' + \
+		db.sql('delete from ACC_Accession using toCheck d ' + \
 			'where d._Accession_key = ACC_Accession._Accession_key', None)
 		db.commit()
 
 	# copy existing cache table accession keys
 
 	elif objectKey == -1:
-		results = db.sql('select * from #toCheck', 'auto')
+		results = db.sql('select * from toCheck', 'auto')
 		for r in results:
 			key = r['_Object_key']
 			value = r['accID']
@@ -265,7 +261,7 @@ def processCache():
 
 	# retrieve GO data in VOC_Evidence table
 
-        cmd = 'select e._AnnotEvidence_key, e.inferredFrom, m.symbol, goID = ta.accID ' + \
+        cmd = 'select e._AnnotEvidence_key, e.inferredFrom, m.symbol, ta.accID as goID ' + \
 		'from VOC_Annot a, VOC_Evidence e, MRK_Marker m, ACC_Accession ta, MGI_User u ' + \
 		'where a._AnnotType_key = 1000 ' + \
 		'and a._Annot_key = e._Annot_key ' + \
@@ -283,7 +279,7 @@ def processCache():
 		cmd = cmd + ' and a._Object_key = %s' % (objectKey)
 
 	elif createdBy is not None:
-		cmd = cmd + ' and u.login like "%s"' % (createdBy)
+		cmd = cmd + ' and u.login like \'%s\'' % (createdBy)
 
 	results = db.sql(cmd, 'auto')
 	eiErrors = ''

@@ -33,14 +33,5 @@ setenv COLDELIM		"|"
 setenv LINEDELIM	"\n"
 setenv CREATEDBY        1000
 
-
-if ( ${DB_TYPE} == 'postgres' ) then
-
 setenv BCP_CMD "${PG_DBUTILS}/bin/bcpin.csh ${MGD_DBSERVER} ${MGD_DBNAME}"
-
-else
-
-setenv BCP_CMD "${MGI_DBUTILS}/bin/bcpin.csh ${MGD_DBSERVER} ${MGD_DBNAME}"
-
-endif
 

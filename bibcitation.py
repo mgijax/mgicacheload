@@ -36,23 +36,15 @@ import os
 import getopt
 import string
 import mgi_utils
+import db
 
 COLDL = '|'
 LINEDL = '\n'
 table = 'BIB_Citation_Cache'
 
-try:
-    if os.environ['DB_TYPE'] == 'postgres':
-        import pg_db
-        db = pg_db
-        db.setTrace()
-        db.setAutoTranslateBE()
-    else:
-        import db
-        db.set_sqlLogFunction(db.sqlLogAll)
-except:
-    import db
-    db.set_sqlLogFunction(db.sqlLogAll)
+db.setTrace()
+db.setAutoTranslate(False)
+db.setAutoTranslateBE(False)
 
 #
 # when the EI calls this script, it is *not* sourcing ./Configuration
@@ -64,7 +56,7 @@ try:
 except:
     outDir = ''
 
-insertSQL = 'insert into BIB_Citation_Cache values (%s,%s,"%s","%s","%s","%s","%s","%s","%s", %s, "%s")'
+insertSQL = 'insert into BIB_Citation_Cache values (%s,%s,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\', %s, \'%s\')'
 
 def showUsage():
 	'''
@@ -89,30 +81,16 @@ def process(objectKey):
 	# reference attributes
 	#
 
-	if os.environ['DB_TYPE'] == 'postgres':
-
-	    cmd = '''select r._Refs_key, r.journal, reviewStatus = s.name, r.isReviewArticle, 
-		    coalesce(r.journal, "") || " " || coalesce(r.date, "") || ";" || 
-		    coalesce(r.vol, "") || "(" || coalesce(r.issue, "") || "):" || 
-		    coalesce(r.pgs, "") 
+	cmd = '''select r._Refs_key, r.journal, s.name as reviewStatus, r.isReviewArticle, 
+		    coalesce(r.journal, \'\') || \' \' || coalesce(r.date, \'\') || \';\' || 
+		    coalesce(r.vol, \'\') || \'(\' || coalesce(r.issue, \'\') || '\):\' || 
+		    coalesce(r.pgs, \'\') 
 			as citation, 
-		    coalesce(r._primary, "") || ", " || coalesce(r.journal, "") || " " || 
-		    coalesce(r.date, "") || ";" || coalesce(r.vol, "") || "(" || 
-		    coalesce(r.issue, "") || "):" || coalesce(r.pgs, "") 
+		    coalesce(r._primary, \'\') || \', \' || coalesce(r.journal, \'\') || \' \' || 
+		    coalesce(r.date, \'\') || \';\' || coalesce(r.vol, \'\') || \'(\' || 
+		    coalesce(r.issue, \'\') || \'):\' || coalesce(r.pgs, \'\') 
 			as short_citation
-		    into #refsTemp
-		    from BIB_Refs r, BIB_ReviewStatus s
-		    where r._ReviewStatus_key = s._ReviewStatus_key 
-		    '''
-
-	else:
-
-	    cmd = '''select r._Refs_key, r.journal, reviewStatus = s.name, r.isReviewArticle, 
-		    r.journal || " " || r.date || ";" || r.vol || "(" || r.issue || "):" || r.pgs 
-		    	as citation, 
-		    r._primary || ", " || r.journal || " " || r.date || ";" || r.vol || "(" || r.issue || "):" || r.pgs 
-			as short_citation 
-		    into #refsTemp 
+		    INTO TEMPORARY TABLE refsTemp
 		    from BIB_Refs r, BIB_ReviewStatus s
 		    where r._ReviewStatus_key = s._ReviewStatus_key 
 		    '''
@@ -127,21 +105,21 @@ def process(objectKey):
 	# all references modified today
 
         elif objectKey == -2:
-	    cmd = cmd + 'and convert(char(10), r.modification_date, 101) = convert(char(10), getdate(), 101)'
+	    cmd = cmd + 'and to_char(r.modification_date, \'MM/dd/yyyy\') = to_char(current_date, \'MM/dd/yyyy\')'
 
 	db.sql(cmd, None)
-	db.sql('create index idx1 on #refsTemp(_Refs_key)', None)
+	db.sql('create index idx1 on refsTemp(_Refs_key)', None)
 
 	#
 	# mgi ids
 	#
 
         results = db.sql('''select a._Object_key, a.accID
-		from #refsTemp r, ACC_Accession a 
+		from refsTemp r, ACC_Accession a 
 		where r._Refs_key = a._Object_key 
 		and a._MGIType_key = 1
 		and a._LogicalDB_key = 1 
-		and a.prefixPart =  "MGI:" 
+		and a.prefixPart =  \'MGI:\'
 		and a.preferred = 1 
 		''', 'auto')
 
@@ -154,11 +132,11 @@ def process(objectKey):
 	#
 
         results = db.sql('''select a._Object_key, a.accID, a.numericPart 
-		from #refsTemp r, ACC_Accession a 
+		from refsTemp r, ACC_Accession a 
 		where r._Refs_key = a._Object_key 
 		and a._MGIType_key = 1 
 		and a._LogicalDB_key = 1 
-		and a.prefixPart =  "J:" 
+		and a.prefixPart = \'J:\' 
 		and a.preferred = 1
 		''', 'auto')
 
@@ -171,7 +149,7 @@ def process(objectKey):
 	#
 
         results = db.sql('''select a._Object_key, a.accID 
-		from #refsTemp r, ACC_Accession a 
+		from refsTemp r, ACC_Accession a 
 		where r._Refs_key = a._Object_key 
 		and a._MGIType_key = 1 
 		and a._LogicalDB_key = 29 
@@ -184,7 +162,7 @@ def process(objectKey):
 
 	# process all records
 
-	results = db.sql('select * from #refsTemp', 'auto')
+	results = db.sql('select * from refsTemp', 'auto')
 
 	if objectKey == 0:
 
@@ -223,7 +201,7 @@ def process(objectKey):
 
 	    # delete existing cache table entries
 
-	    db.sql('delete from %s from #refsTemp r where r._Refs_key = %s._Refs_key' % (table, table), None)
+	    db.sql('delete from %s USING refsTemp r where r._Refs_key = %s._Refs_key' % (table, table), None)
 	    db.commit()
 
 	    for r in results:
