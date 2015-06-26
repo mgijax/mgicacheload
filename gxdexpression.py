@@ -159,8 +159,6 @@ def process(assayKey):
 
 	# determine type of load
 	if assayKey == 0:
-  		if os.environ['DB_TYPE'] == 'sybase':
-  			db.set_sqlLogFunction(db.sqlLogAll)
 		createFullBCPFile()
 	else:
 		updateSingleAssay(assayKey)
