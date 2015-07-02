@@ -28,7 +28,6 @@ COLDL = os.environ['COLDELIM']
 outDir = os.environ['MGICACHEBCPDIR']
 LINEDL = '\n'
 
-db.setTrace()
 db.setAutoTranslate(False)
 db.setAutoTranslateBE(False)
 

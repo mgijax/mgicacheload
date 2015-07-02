@@ -42,7 +42,6 @@ COLDL = '|'
 LINEDL = '\n'
 table = 'BIB_Citation_Cache'
 
-db.setTrace()
 db.setAutoTranslate(False)
 db.setAutoTranslateBE(False)
 

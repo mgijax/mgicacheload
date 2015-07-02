@@ -63,7 +63,6 @@ import db
 objectKey = None
 createdBy = None
 
-db.setTrace()
 db.setAutoTranslate(False)
 db.setAutoTranslateBE(False)
 
@@ -261,7 +260,11 @@ def processCache():
 
 	# retrieve GO data in VOC_Evidence table
 
+<<<<<<< inferredfrom.py
+        cmd = 'select e._AnnotEvidence_key, e.inferredFrom, m.symbol, goID as ta.accID ' + \
+=======
         cmd = 'select e._AnnotEvidence_key, e.inferredFrom, m.symbol, ta.accID as goID ' + \
+>>>>>>> 1.17
 		'from VOC_Annot a, VOC_Evidence e, MRK_Marker m, ACC_Accession ta, MGI_User u ' + \
 		'where a._AnnotType_key = 1000 ' + \
 		'and a._Annot_key = e._Annot_key ' + \
