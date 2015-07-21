@@ -11,8 +11,6 @@
 
 cd `dirname $0` && source ./Configuration
 
-echo "DB_TYPE = $DB_TYPE"
-
 setenv TABLE GXD_Expression
 setenv OBJECTKEY 0
 
