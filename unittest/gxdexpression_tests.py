@@ -86,7 +86,7 @@ class GxdExpressionCacheTest(unittest.TestCase):
 		"""
 		yesTypes = [10,11]
 		for yesType in yesTypes:
-			results = [{'_assaytype_key': yesType, 'reportergene': None}]
+			results = [{'_assaytype_key': yesType, 'has_driver': 0}]
 			isRecombinase = gxdexpression.computeIsRecombinase(results)
 			self.assertEquals(1, isRecombinase)
 
@@ -97,29 +97,14 @@ class GxdExpressionCacheTest(unittest.TestCase):
 		"""
 		noTypes = [-2,-1,1,2,3,4,5,6,7,8,9]
 		for noType in noTypes:
-			results = [{'_assaytype_key': noType, 'reportergene': None}]
+			results = [{'_assaytype_key': noType, 'has_driver': 0}]
 			isRecombinase = gxdexpression.computeIsRecombinase(results)
 			self.assertEquals(0, isRecombinase)
 
-	def test_isRecombinase_cre_reporter(self):
-		results = [{'_assaytype_key': 9, 'reportergene': 'Cre'}]
+	def test_isRecombinase_driver_note(self):
+		results = [{'_assaytype_key': 9, 'has_driver': 1}]
 		isRecombinase = gxdexpression.computeIsRecombinase(results)
 		self.assertEquals(1, isRecombinase)
-
-	def test_isRecombinase_cre_reporter_wrong_type(self):
-		results = [{'_assaytype_key': 1, 'reportergene': 'Cre'}]
-		isRecombinase = gxdexpression.computeIsRecombinase(results)
-		self.assertEquals(0, isRecombinase)
-
-	def test_isRecombinase_flp_reporter(self):
-		results = [{'_assaytype_key': 9, 'reportergene': 'FLP'}]
-		isRecombinase = gxdexpression.computeIsRecombinase(results)
-		self.assertEquals(1, isRecombinase)
-
-	def test_isRecombinase_flp_reporter_wrong_type(self):
-		results = [{'_assaytype_key': 1, 'reportergene': 'FLP'}]
-		isRecombinase = gxdexpression.computeIsRecombinase(results)
-		self.assertEquals(0, isRecombinase)
 
 
 	# test hasImage

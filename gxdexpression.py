@@ -48,6 +48,8 @@ COLDL = '|'
 LINEDL = '\n'
 TABLE = 'GXD_Expression'
 
+DRIVER_NOTE_TYPE_KEY = 1034
+
 # current date
 CDATE = mgi_utils.date("%m/%d/%Y")
 
@@ -277,7 +279,12 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		i._image_key,
 		i.xDim as image_xdim,
 		reporter.term reportergene,
-		et._emaps_key
+		et._emaps_key,
+		exists (select 1 from mgi_note mn
+			join gxd_allelegenotype gag
+				on gag._allele_key = mn._object_key
+				and mn._notetype_key = %(drivernote_type_key)d
+			where gag._genotype_key = s._genotype_key) has_driver
 	from gxd_assay a 
 		join
 		gxd_specimen s on
@@ -306,8 +313,8 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		left outer join
 		voc_term reporter on
 			reporter._term_key = a._reportergene_key
-	%s
-	''' % (where)
+	%(where)s
+	''' % {'where':where, 'drivernote_type_key': DRIVER_NOTE_TYPE_KEY}
 
 	results = db.sql(insituSql, 'auto')
 
@@ -505,7 +512,7 @@ def computeIsRecombinase(dbResults):
 			return 1
 		
 		if dbResults[0]['_assaytype_key'] == 9 \
-		    and dbResults[0]['reportergene'] in ['Cre', 'FLP']:
+		    and dbResults[0]['has_driver']:
 			return 1
 
 	return 0
