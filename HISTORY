@@ -1,8 +1,9 @@
-TAG: mgicacheload-6-0-0-1
+TAG: mgicacheload-6-0-0-1, mgicacheload-6-0-0-2
 DATE: 07/22/2015
-STAFF: lec 
+STAFF: lec, kstone 
 CHANGES:
 1) TR11750/postgres
+2) Fixed bug in gxdexpression.py
 
 TAG: mgicacheload-sybase
 DATE: 06/25/2015
