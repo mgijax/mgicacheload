@@ -198,7 +198,7 @@ def _initEmapsTempTable(assayKey=None):
         left outer join mgi_emaps_mapping em on
                 em.accid=accs.accid
         left outer join acc_accession acce on
-                acce.accid=em.emapsid
+                acce.accid=upper(em.emapsid)
                 and acce._mgitype_key = 13
 	'''
 
