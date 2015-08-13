@@ -42,6 +42,7 @@ COLDL = '|'
 LINEDL = '\n'
 table = 'BIB_Citation_Cache'
 
+#db.setTrace()
 db.setAutoTranslate(False)
 db.setAutoTranslateBE(False)
 
@@ -55,7 +56,7 @@ try:
 except:
     outDir = ''
 
-insertSQL = 'insert into BIB_Citation_Cache values (%s,%s,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\', %s, \'%s\')'
+insertSQL = '''insert into BIB_Citation_Cache values (%s,%s,'%s','%s','%s','%s','%s','%s','%s',%s,'%s')'''
 
 def showUsage():
 	'''
@@ -220,6 +221,8 @@ def process(objectKey):
 		# TR 10037/remove quotes from citations
 		citation = string.replace(r['citation'], '"', '')
 		short_citation = string.replace(r['short_citation'], '"', '')
+		citation = string.replace(citation, "'", "''")
+		short_citation = string.replace(short_citation, "'", "''")
 
 	        db.sql(insertSQL % ( \
 		    mgi_utils.prvalue(key), \
