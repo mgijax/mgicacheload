@@ -160,7 +160,7 @@ def transformProperties(properties):
         value = property['value']
         
         # transform the value
-        value = "\\Link(#|%s|)" % value
+        value = "\\\\Link(#|%s|)" % value
         
         transformed.append({
          'displayNote': value,
