@@ -10,3 +10,9 @@ if ( $status ) then
     exit 1
 endif
 
+echo "Running go_annot_extensions_tests"
+/usr/local/bin/python go_annot_extensions_tests.py
+if ( $status ) then
+    exit 1
+endif
+
