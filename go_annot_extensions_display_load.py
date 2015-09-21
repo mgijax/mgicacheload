@@ -1,18 +1,18 @@
 #!/usr/local/bin/python
 """
-
 Load the cache of notes
     representing the display values for 
     GO annotation extensions (VOC_Evidence_Property).
-
 """
 
 from optparse import OptionParser
 import os
+import tempfile
 
 import db
 import mgi_utils
 import go_annot_extensions
+
 
 USAGE="""
 usage: %prog [-S -D -U -P -K]
@@ -36,11 +36,17 @@ DISPLAY_NOTE_TYPE_KEY = 1045
 # MGI Type key for voc_evidence_property
 PROPERTY_MGITYPE_KEY = 41
 
+VOCAB_TERM_MGITYPE_KEY = 13
+MARKER_MGITYPE_KEY = 2
+
 # current date
 CDATE = mgi_utils.date("%m/%d/%Y")
 
 # use mgd_dbo
 CREATEDBY_KEY = 1001
+
+# temp table for joining against ACC_Accession
+TEMP_ID_TABLE = "tmp_annot_id"
 
 
 def readCommandLine():
@@ -132,8 +138,8 @@ def _queryAnnotExtensions(evidenceKey=None,
             vep._annotevidence_key = ve._annotevidence_key
         where ve._evidenceterm_key in (%s)
             and vep._propertyterm_key in (%s)
-            %s
-            %s
+        %s
+        %s
     ''' % (evidenceTermKeyClause, \
         propertyTermKeyClause, \
         evidenceKeyClause,\
@@ -146,12 +152,120 @@ def _queryAnnotExtensions(evidenceKey=None,
         r['value'] = extensionProcessor.processValue(r['value'])
     
     return results
+
+
+def _createTempIDTable(properties):
+    """
+    Create a temp table TEMP_ID_TABLE with the current properties
+    for joining against ACC_Accession to build maps
+        between IDs and display values
+    """
+    
+    # setup a temp table to enable querying
+    #    ACC_Accession via join
+    
+    dropTempTable = '''
+        drop table if exists %s
+    ''' % TEMP_ID_TABLE
+    db.sql(dropTempTable, None)
+    
+    
+    createTempTable = '''
+        create temp table %s (
+           id text NOT NULL
+        )
+    ''' % TEMP_ID_TABLE
+    db.sql(createTempTable, None)
+    
+    # write a BCP file to insert into temp table
+    temp = tempfile.NamedTemporaryFile()
+    try:
+    
+        for property in properties:
+            id = property['value']
+            temp.write("%s\n" % (id) )
+            
+        temp.seek(0)
+    
+        db.bcp(temp.name, TEMP_ID_TABLE, schema=None)
+        
+    finally:
+        temp.close()
+            
+    
+    indexTempTable = '''
+        create index %s_id_idx on %s (id)
+    ''' % (TEMP_ID_TABLE, TEMP_ID_TABLE)
+    db.sql(indexTempTable, None)
+    
+
+
+def _queryTermIDMap():
+    """
+    Query and build a {termID : term} map based on
+        the 'value' inside each property
+        
+    Assumes TEMP_ID_TABLE has been populated
+    """
+    termIDMap = {}
+    
+    query = '''
+    select id.id,
+    term.term
+    from %s id
+    join acc_accession acc on
+        acc.accid = id.id
+        and _mgitype_key = %d
+    join voc_term term on
+        term._term_key = acc._object_key
+    order by preferred
+    ''' % (TEMP_ID_TABLE, VOCAB_TERM_MGITYPE_KEY)
+    results = db.sql(query, 'auto')
+    
+    for result in results:
+        termIDMap[result['id']] = result['term']
+    
+    return termIDMap
+    
+    
+def _queryMarkerIDMap():
+    """
+    Query and build a {markerID : symbol} map based on
+        the 'value' inside each property
+        
+    Assumes TEMP_ID_TABLE has been populated
+    """
+    markerIDMap = {}
+
+    query = '''
+    select id.id,
+    mrk.symbol
+    from %s id
+    join acc_accession acc on
+        acc.accid = id.id
+        and _mgitype_key = %d
+    join mrk_marker mrk on
+        mrk._marker_key = acc._object_key
+    order by preferred
+    ''' % (TEMP_ID_TABLE, MARKER_MGITYPE_KEY)
+    results = db.sql(query, 'auto')
+    
+    for result in results:
+        markerIDMap[result['id']] = result['symbol']
+        
+    return markerIDMap
+   
     
     
 ### Business Logic Functions ###
-def transformProperties(properties):
+def transformProperties(properties,
+                        termIDMap={},
+                        markerIDMap={}):
     """
     Transform the properties into their display values
+        using provided termIDMap {id:term},
+            and markerIDMap {id:symbol}
+    
     returns [ {'displayNote', '_evidenceproperty_key'}, ]
     """
     
@@ -161,8 +275,18 @@ def transformProperties(properties):
         
         value = property['value']
         
-        # transform the value
-        value = "\\\\Link(#|%s|)" % value
+        if value in termIDMap:
+            value = termIDMap[value]
+            
+        elif value in markerIDMap:
+            value = markerIDMap[value]
+            
+        else:
+            pass
+            #print "Could not map ID = %s" % value
+        
+        # transform the value into a link
+        #value = "\\Link(#|%s|)" % value
         
         transformed.append({
          'displayNote': value,
@@ -268,11 +392,24 @@ def updateAll():
     
     try:
         while properties:
-        
-            properties = transformProperties(properties)
             
+            # setup the lookups for IDs to display values
+            _createTempIDTable(properties)
+            
+            termIDMap = _queryTermIDMap()
+            
+            markerIDMap = _queryMarkerIDMap()
+            
+            
+            # transform the properties to their display/links
+            properties = transformProperties(properties, termIDMap, markerIDMap)
+            
+            
+            # write BCP files
             _writeToBCPFile(properties, noteFile, chunkFile, startingNoteKey)
             
+            
+            # fetch new batch of properties
             startingNoteKey += batchSize
             offset += batchSize
             properties = _queryAnnotExtensions(limit=batchSize, offset=offset)
