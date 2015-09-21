@@ -1,8 +1,10 @@
 #!/usr/local/bin/python
 """
+
 Load the cache of notes
     representing the display values for 
     GO annotation extensions (VOC_Evidence_Property).
+
 """
 
 from optparse import OptionParser
