@@ -8,6 +8,7 @@ Load the cache of notes
 from optparse import OptionParser
 import os
 import tempfile
+import re
 
 import db
 import mgi_utils
@@ -270,12 +271,21 @@ def transformProperties(properties,
     """
     
     transformed = []
+
+    # Regex for special provider/logical DB hanlding
+    PRO_regex = re.compile(r'^PR:', re.I)
     
     for property in properties:
         
         value = property['value']
+
+
+	# special provider cases
+	if PRO_regex.match(value):
+		value = value
         
-        if value in termIDMap:
+	# standard cases to match accession records
+        elif value in termIDMap:
             value = termIDMap[value]
             
         elif value in markerIDMap:
