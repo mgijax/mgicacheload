@@ -55,9 +55,12 @@ class TransformPropertiesTest(unittest.TestCase):
 		
 		
 	def test_PR_id_link(self):
+		"""
+		Keep the PR: prefix in links
+		"""
 		properties = [{'value':['PR:001234'], '_evidenceproperty_key':1}]
 		transformed = transformProperties(properties, self.urlMap)
-		expected = '\\\\Link(http://fake.pro.org/001234|PR:001234|)'
+		expected = '\\\\Link(http://fake.pro.org/PR:001234|PR:001234|)'
 		
 		self.assertEquals(expected, transformed[0]['displayNote'])
 		
