@@ -59,7 +59,19 @@ class TransformPropertiesTest(unittest.TestCase):
 						    markerIDMap={},
 						    providerLinkMap=self.urlMap
 		)
-		expected = '\\\\Acc(GO:12345|test GO term|)'
+		expected = '\\\\GO(GO:12345|test GO term|)'
+		
+		self.assertEquals(expected, transformed[0]['displayNote'])
+		
+		
+	def test_EMAPA_id(self):
+		properties = [{'value':'EMAPA:12345', '_evidenceproperty_key':1}]
+		transformed = transformProperties(properties,
+						    termIDMap={'EMAPA:12345':'test EMAPA term'},
+						    markerIDMap={},
+						    providerLinkMap=self.urlMap
+		)
+		expected = '\\\\EMAPA(EMAPA:12345|test EMAPA term|)'
 		
 		self.assertEquals(expected, transformed[0]['displayNote'])
 		

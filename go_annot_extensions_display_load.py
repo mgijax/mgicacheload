@@ -334,8 +334,8 @@ def transformProperties(properties,
             if id in termIDMap:
                 term = termIDMap[id]
             
-                # link GO ID to accession query
-                value = makeNoteTag(id, term, 'Acc')
+                # link GO ID to GO term detail
+                value = makeNoteTag(id, term, 'GO')
                 
         elif EMAPA_regex.match(value):
             
@@ -343,8 +343,8 @@ def transformProperties(properties,
             if id in termIDMap:
                 term = termIDMap[id]
             
-                # link EMAPA ID to accession query
-                value = makeNoteTag(id, term, 'Acc')
+                # link EMAPA ID to EMAPA term detail
+                value = makeNoteTag(id, term, 'EMAPA')
                 
         elif CL_regex.match(value) and \
             'Cell Ontology' in providerLinkMap:
