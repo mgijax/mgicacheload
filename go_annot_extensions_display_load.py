@@ -49,6 +49,19 @@ CREATEDBY_KEY = 1001
 # temp table for joining against ACC_Accession
 TEMP_ID_TABLE = "tmp_annot_id"
 
+# External database links
+# (Logical DB name, Actual DB name)
+DATABASE_PROVIDERS = [
+    # Cell Ontology
+    ('CL','Cell Ontology'),
+    # Ensembl
+    ('Ensembl Gene Model','Ensembl Gene Model'),
+    # PR: IDs
+    ('Protein Ontology', 'Protein Ontology'),
+    # UniProtKB: IDs
+    ('SWISS-PROT', 'UniProt')
+]
+
 
 def readCommandLine():
     """
@@ -256,16 +269,43 @@ def _queryMarkerIDMap():
         
     return markerIDMap
    
+   
+def _queryProviderLinkMap():
+    """
+    Query and build an {acc_actualdb.name : url} map for
+        linking annotation extensions
+        
+    """
+    providerLinkMap = {}
+    
+    # Query by both logical DB and actual DB to get the exact url we want to use
+    logicalActualDbClause = ",".join("('%s','%s')" % (ldb, adb) for (ldb, adb) in DATABASE_PROVIDERS)
+    
+    query = '''
+    select adb.name, adb.url
+    from acc_logicaldb ldb
+    join acc_actualdb adb on
+        adb._logicaldb_key = ldb._logicaldb_key
+    where (ldb.name, adb.name) in (%s)
+    ''' % ( logicalActualDbClause)
+    results = db.sql(query, 'auto')
+    
+    for result in results:
+        providerLinkMap[result['name']] = result['url']
+    
+    return providerLinkMap
     
     
 ### Business Logic Functions ###
 def transformProperties(properties,
                         termIDMap={},
-                        markerIDMap={}):
+                        markerIDMap={},
+                        providerLinkMap={}):
     """
     Transform the properties into their display values
         using provided termIDMap {id:term},
-            and markerIDMap {id:symbol}
+            and markerIDMap {id:symbol},
+            and providerLinkMap {actualdb.name : urlpattern} -- for external urls
     
     returns [ {'displayNote', '_evidenceproperty_key'}, ]
     """
@@ -273,30 +313,92 @@ def transformProperties(properties,
     transformed = []
 
     # Regex for special provider/logical DB hanlding
+    CL_regex = re.compile(r'^CL:', re.I)
+    EMAPA_regex = re.compile(r'^EMAPA:', re.I)
+    ENSEMBL_regex = re.compile(r'^ENSEMBL:', re.I)
+    GO_regex = re.compile(r'^GO:', re.I)
+    MGI_regex = re.compile(r'^MGI:', re.I)
     PRO_regex = re.compile(r'^PR:', re.I)
+    UNIPROTKB_regex = re.compile(r'^UniprotKB:', re.I)
     
     for property in properties:
         
         value = property['value']
 
 
-	# special provider cases
-	if PRO_regex.match(value):
-		value = value
+    	### IDs that we link and map to voc terms ###
         
-	# standard cases to match accession records
-        elif value in termIDMap:
-            value = termIDMap[value]
+    	if GO_regex.match(value):
             
-        elif value in markerIDMap:
-            value = markerIDMap[value]
+            id = value
+            if id in termIDMap:
+                term = termIDMap[id]
+            
+                # link GO ID to accession query
+                value = makeNoteTag(id, term, 'Acc')
+                
+        elif EMAPA_regex.match(value):
+            
+            id = value
+            if id in termIDMap:
+                term = termIDMap[id]
+            
+                # link EMAPA ID to accession query
+                value = makeNoteTag(id, term, 'Acc')
+                
+        elif CL_regex.match(value) and \
+            'Cell Ontology' in providerLinkMap:
+            
+            id = value
+            if id in termIDMap:
+                term = termIDMap[id]
+            
+                # link form of ID has an underscore
+                linkValue = id.replace(':','_')
+                url = providerLinkMap['Cell Ontology'].replace('@@@@', linkValue)
+                value = makeNoteTag(url, term)
+                
+        ### IDs that we link and map to marker symbols ###
+                
+        elif MGI_regex.match(value):
+            
+            # all MGI IDs should be a mouse marker
+            id = value
+            if id in markerIDMap:
+                symbol = markerIDMap[id]
+            
+                # link via Marker detail
+                value = makeNoteTag(id, symbol, 'Marker')
+                
+        ### IDs that we link, but do not map ###       
+        
+        elif ENSEMBL_regex.match(value) and \
+                'Ensembl Gene Model' in providerLinkMap:
+            
+            # remove prefix for linking
+            linkValue = value[ (value.find(':') + 1) : ]
+            url = providerLinkMap['Ensembl Gene Model'].replace('@@@@', linkValue)
+            value = makeNoteTag(url, value)
+        
+        elif PRO_regex.match(value) and \
+                'Protein Ontology' in providerLinkMap:
+            
+             # keep the PR: prefix
+            linkValue = value
+            url = providerLinkMap['Protein Ontology'].replace('@@@@', linkValue)
+            value = makeNoteTag(url, value)
+        
+        elif UNIPROTKB_regex.match(value) and \
+                'UniProt' in providerLinkMap:
+                
+            # remove prefix for linking
+            linkValue = value[ (value.find(':') + 1) : ]
+            url = providerLinkMap['UniProt'].replace('@@@@', linkValue)
+            value = makeNoteTag(url, value)
             
         else:
             pass
             #print "Could not map ID = %s" % value
-        
-        # transform the value into a link
-        #value = "\\Link(#|%s|)" % value
         
         transformed.append({
          'displayNote': value,
@@ -306,6 +408,12 @@ def transformProperties(properties,
 
     return transformed    
 
+
+def makeNoteTag(url, display, type='Link'):
+    """
+    return an MGI note tag string
+    """ 
+    return '\\\\%s(%s|%s|)' % (type, url, display)
 
     
 ### Functions to perform the updates ###    
@@ -396,6 +504,7 @@ def updateAll():
     batchSize = 10000
     offset = 0
     properties = _queryAnnotExtensions(limit=batchSize, offset=offset)
+    providerLinkMap = _queryProviderLinkMap()
     
     noteFile = open(NOTE_BCP_FILE, 'w')
     chunkFile = open(NOTECHUNK_BCP_FILE, 'w')
@@ -412,7 +521,7 @@ def updateAll():
             
             
             # transform the properties to their display/links
-            properties = transformProperties(properties, termIDMap, markerIDMap)
+            properties = transformProperties(properties, termIDMap, markerIDMap, providerLinkMap)
             
             
             # write BCP files

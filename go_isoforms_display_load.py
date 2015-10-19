@@ -235,8 +235,8 @@ def transformProperties(properties,
             elif PRO_regex.match(value) and \
                 'Protein Ontology' in providerLinkMap:
                 
-		# keep the PR: prefix
-		linkValue = value
+                # keep the PR: prefix
+                linkValue = value
                 url = providerLinkMap['Protein Ontology'].replace('@@@@', linkValue)
                 value = makeNoteTag(url, value)
                 
