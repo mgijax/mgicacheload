@@ -1,7 +1,16 @@
+TAG: mgicacheload-6-0-2-1
+DATE: 12/02/2015
+STAFF: lec
+CHANGES:
+1) new
+go_annot_extensions_display_load.csh
+go_annot_extensions_display_load.py
+go_isoforms_display_load.csh
+go_isoforms_display_load.py
+
 TAG: mgicacheload-tr12070-BP
 DATE: 09/17/2015
 STAFF: kstone
-
 
 TAG: mgicacheload-6-0-0-4
 DATE: 08/13/2015

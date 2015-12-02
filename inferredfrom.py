@@ -63,8 +63,8 @@ import db
 objectKey = None
 createdBy = None
 
-db.setAutoTranslate(False)
-db.setAutoTranslateBE(False)
+
+
 
 execSQL = 'select ACC_insertNoChecks (1001,%d,\'%s\',%d,\'Annotation Evidence\',-1,1,1);'
 eiErrorStatus = '%s     %s     %s\n'

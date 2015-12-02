@@ -28,8 +28,8 @@ COLDL = os.environ['COLDELIM']
 outDir = os.environ['MGICACHEBCPDIR']
 LINEDL = '\n'
 
-db.setAutoTranslate(False)
-db.setAutoTranslateBE(False)
+
+
 
 try:
 	table = os.environ['TABLE']
