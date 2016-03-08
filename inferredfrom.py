@@ -66,9 +66,6 @@ db.setAutoTranslateBE(False)
 objectKey = None
 createdBy = None
 
-
-
-
 execSQL = 'select ACC_insertNoChecks (1001,%d,\'%s\',%d,\'Annotation Evidence\',-1,1,1);'
 eiErrorStatus = '%s     %s     %s\n'
 
