@@ -60,6 +60,9 @@ import mgi_utils
 import accessionlib
 import db
 
+db.setAutoTranslate(False)
+db.setAutoTranslateBE(False)
+
 objectKey = None
 createdBy = None
 
