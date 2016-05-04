@@ -14,6 +14,8 @@ import db
 import mgi_utils
 import go_annot_extensions
 
+db.setAutoTranslate(False)
+db.setAutoTranslateBE(False)
 
 USAGE="""
 usage: %prog [-S -D -U -P -K]

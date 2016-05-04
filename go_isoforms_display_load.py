@@ -13,6 +13,8 @@ import db
 import mgi_utils
 import go_isoforms
 
+db.setAutoTranslate(False)
+db.setAutoTranslateBE(False)
 
 USAGE="""
 usage: %prog [-S -D -U -P -K]

@@ -29,8 +29,8 @@ import string
 import mgi_utils
 import db
 
-
-
+db.setAutoTranslate(False)
+db.setAutoTranslateBE(False)
 
 #
 # when the EI calls this script, it is *not* sourcing ./Configuration
@@ -66,8 +66,8 @@ CACHE_FIELDS = [
 	('_assaytype_key','%s'),
 	('_genotype_key','%s'),
 	('_marker_key','%s'),
-	('_structure_key','%s'),
-	('_emaps_key','%s'),
+	('_emapa_term_key','%s'),
+	('_stage_key','%s'),
 	('_specimen_key','%s'),
 	('_gellane_key','%s'),
 	('expressed','%s'),
@@ -182,69 +182,6 @@ def _fetchMaxAssayKey():
 	return db.sql('''select max(_assay_key) as maxkey from gxd_assay''', 
 		'auto')[0]['maxkey'] or 1
 
-def _initEmapsTempTable(assayKey=None):
-	"""
-	Create the emaps_temp table
-	for mapping AD structure keys to emaps
-	"""
-
-	emapsSelect = '''
-	select distinct accs._object_key as _structure_key,
-                acce._object_key as _emaps_key
-	'''
-
-	emapsFrom = '''
-	from acc_accession accs
-        left outer join mgi_emaps_mapping em on
-                em.accid=accs.accid
-        left outer join acc_accession acce on
-                acce.accid=upper(em.emapsid)
-                and acce._mgitype_key = 13
-	'''
-
-	emapsWhere = '''
-	where   accs._mgitype_key = 38
-		and accs.preferred = 1
-		and accs._logicaldb_key = 1
-	'''
-	
-	emapsTemp = '''
-	%s
-	INTO TEMPORARY TABLE emaps_temp
-	%s
-	%s
-	''' % (emapsSelect, emapsFrom, emapsWhere)
-	if assayKey:
-		emapsTemp = '''
-		%s
-		INTO TEMPORARY TABLE emaps_temp
-		%s
-		%s
-		    and  exists (
-			select 1 from gxd_isresultstructure irs
-			join gxd_insituresult ir on
-				ir._result_key=irs._result_key
-			join gxd_specimen s on
-				s._specimen_key=ir._specimen_key
-			where irs._structure_key=accs._object_key
-				and s._assay_key = %d
-		    )
-		UNION
-		%s
-		%s
-		%s
-		    and exists (
-			select 1 from gxd_gellanestructure gls
-			join gxd_gellane gl on
-				gl._gellane_key=gls._gellane_key
-			where gls._structure_key=accs._object_key
-				and gl._assay_key = %d
-		    )
-		''' % (emapsSelect, emapsFrom, emapsWhere, assayKey, \
-			emapsSelect, emapsFrom, emapsWhere, assayKey)
-	db.sql(emapsTemp, None)
-	db.sql('create index emaps_struct_idx on emaps_temp (_structure_key)', None)
-
 def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 	"""
 	Load Insitu results from DB
@@ -267,7 +204,8 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		a._assaytype_key,
 		s._genotype_key,
 		a._marker_key,
-		irs._structure_key,
+		irs._emapa_term_key,
+		irs._stage_key,
 		strength.strength,
 		s.age,
 		s.agemin,
@@ -279,7 +217,6 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		i._image_key,
 		i.xDim as image_xdim,
 		reporter.term reportergene,
-		et._emaps_key,
 		exists (select 1 from mgi_note mn
 			join gxd_allelegenotype gag
 				on gag._allele_key = mn._object_key
@@ -298,9 +235,6 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		join
 		gxd_isresultstructure irs on
 			irs._result_key = ir._result_key
-		join
-		emaps_temp et on
-			et._structure_key = irs._structure_key	
 		left outer join
 		gxd_insituresultimage iri on
 			iri._result_key = ir._result_key
@@ -343,7 +277,8 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		a._assaytype_key,
 		gl._genotype_key,
 		a._marker_key,
-		gls._structure_key,
+		gls._emapa_term_key,
+		gls._stage_key,
 		strength.strength,
 		gl.age,
 		gl.agemin,
@@ -354,8 +289,7 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		ip._imagepane_key,
 		i._image_key,
 		i.xDim as image_xdim,
-		reporter.term reportergene,
-		et._emaps_key
+		reporter.term reportergene
 	from gxd_assay a 
 		join
 		gxd_gellane gl on (
@@ -364,9 +298,6 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 		) join
 		gxd_gellanestructure gls on
 			gls._gellane_key = gl._gellane_key
-		join
-		emaps_temp et on
-			et._structure_key = gls._structure_key
 		join
 		gxd_gelband gb on
 			gb._gellane_key = gl._gellane_key
@@ -417,7 +348,7 @@ def mergeInsituResults(dbResults):
 	returns list result groups
 	"""
 
-	return groupResultsBy(dbResults, ['_specimen_key','_structure_key']).values()
+	return groupResultsBy(dbResults, ['_specimen_key','_emapa_term_key', '_stage_key']).values()
 
 def mergeGelResults(dbResults):
 	"""
@@ -425,7 +356,7 @@ def mergeGelResults(dbResults):
 	by uniqueness of cache fields,
 	returns list result groups
 	"""
-	return groupResultsBy(dbResults, ['_gellane_key','_structure_key']).values()
+	return groupResultsBy(dbResults, ['_gellane_key','_emapa_term_key', '_stage_key']).values()
 
 def generateCacheResults(dbResultGroups, assayResultMap):
 	"""
@@ -462,8 +393,8 @@ def generateCacheResults(dbResultGroups, assayResultMap):
 			rep['_assaytype_key'],
 			rep['_genotype_key'],
 			rep['_marker_key'],
-			rep['_structure_key'],
-			rep['_emaps_key'],
+			rep['_emapa_term_key'],
+			rep['_stage_key'],
 			_specimen_key,
 			_gellane_key,
 			expressed,
@@ -550,8 +481,6 @@ def createFullBCPFile():
 
 	numBatches = (maxAssayKey / batchSize) + 1
 
-	_initEmapsTempTable()
-
 	startingCacheKey = 1
 	for i in range(numBatches):
 		startKey = i * batchSize
@@ -618,9 +547,7 @@ def updateSingleAssay(assayKey):
 	# check for either gel data or insitu data
 	# fetch the appropriate database results
 	# merge them into groups by unique cache keys
-	#	e.g. _result_key + _structure_key for insitus
-
-	_initEmapsTempTable(assayKey)
+	#	e.g. _result_key + _emapa_term_key + _stage_key for insitus
 
 	dbResults = []
 	resultGroups = []
