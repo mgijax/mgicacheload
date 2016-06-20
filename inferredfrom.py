@@ -245,7 +245,7 @@ def preCache():
 		for r in results:
 			key = r['_Object_key']
 			value = r['accID']
-			if not cacheIF.has_key(key):
+			if key not in cacheIF:
 			   cacheIF[key] = []
 		        cacheIF[key].append(value)
 
@@ -260,17 +260,18 @@ def processCache():
 
 	# retrieve GO data in VOC_Evidence table
 
-        cmd = 'select e._AnnotEvidence_key, e.inferredFrom, m.symbol, ta.accID as goID ' + \
-		'from VOC_Annot a, VOC_Evidence e, MRK_Marker m, ACC_Accession ta, MGI_User u ' + \
-		'where a._AnnotType_key = 1000 ' + \
-		'and a._Annot_key = e._Annot_key ' + \
-		'and e.inferredFrom is not null ' + \
-		'and a._Object_key = m._Marker_key ' + \
-		'and a._Term_key = ta._Object_key ' + \
-		'and ta._LogicalDB_key = 31 ' + \
-		'and ta._MGIType_key = 13 ' + \
-		'and ta.preferred = 1 ' + \
-		'and e._CreatedBy_key = u._User_key '
+        cmd = '''select e._AnnotEvidence_key, e.inferredFrom, m.symbol, ta.accID as goID 
+		from VOC_Annot a, VOC_Evidence e, MRK_Marker m, ACC_Accession ta, MGI_User u
+		where a._AnnotType_key = 1000 
+		and a._Annot_key = e._Annot_key 
+		and e.inferredFrom is not null 
+		and a._Object_key = m._Marker_key 
+		and a._Term_key = ta._Object_key 
+		and ta._LogicalDB_key = 31 
+		and ta._MGIType_key = 13 
+		and ta.preferred = 1 
+		and e._CreatedBy_key = u._User_key
+		'''
 
 	# select data by specific marker or by created by
 
