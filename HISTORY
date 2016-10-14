@@ -1,3 +1,11 @@
+TAG: mgicacheload-6-0-8-?
+DATE: 10/14/2016
+STAFF: lec
+CHANGES:
+TR12427/Disease Ontology (DO)
+TR 12083/add cache primary key to VOC_GO_Cache
+1) vocgo.py
+
 TAG: mgicacheload-6-0-6-1
 TAG: mgicacheload-6-0-5-2
 TAG: mgicacheload-6-0-5-1

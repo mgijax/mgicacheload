@@ -56,12 +56,15 @@ def createBCPfile():
 		and n._DAG_key = d._DAG_key 
 		''', 'auto')
 
+	cacheKey = 1
 	for r in results:
-	    cacheBCP.write(mgi_utils.prvalue(r['_Term_key']) + COLDL + \
+	    cacheBCP.write(mgi_utils.prvalue(cacheKey) + COLDL + \
+	                   mgi_utils.prvalue(r['_Term_key']) + COLDL + \
 	    		   mgi_utils.prvalue(r['_DAG_key']) + COLDL + \
 	    		   mgi_utils.prvalue(r['abbreviation']) + COLDL + \
 	    		   mgi_utils.prvalue(r['accID']) + COLDL + \
 	    		   mgi_utils.prvalue(r['term']) + LINEDL)
+	    cacheKey = cacheKey + 1
 	cacheBCP.close()
 
 #
