@@ -29,9 +29,6 @@ import string
 import mgi_utils
 import db
 
-db.setAutoTranslate(False)
-db.setAutoTranslateBE(False)
-
 #
 # when the EI calls this script, it is *not* sourcing ./Configuration
 #

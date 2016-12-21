@@ -43,8 +43,6 @@ LINEDL = '\n'
 table = 'BIB_Citation_Cache'
 
 #db.setTrace()
-db.setAutoTranslate(False)
-db.setAutoTranslateBE(False)
 
 #
 # when the EI calls this script, it is *not* sourcing ./Configuration

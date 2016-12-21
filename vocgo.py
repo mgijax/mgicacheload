@@ -24,9 +24,6 @@ import os
 import mgi_utils
 import db
 
-db.setAutoTranslate(False)
-db.setAutoTranslateBE(False)
-
 COLDL = os.environ['COLDELIM']
 outDir = os.environ['MGICACHEBCPDIR']
 LINEDL = '\n'
