@@ -117,7 +117,7 @@ def process(objectKey):
 		where r._Refs_key = a._Object_key 
 		and a._MGIType_key = 1
 		and a._LogicalDB_key = 1 
-		and a.prefixPart =  \'MGI:\'
+		and a.prefixPart =  'MGI:'
 		and a.preferred = 1 
 		''', 'auto')
 
@@ -134,7 +134,7 @@ def process(objectKey):
 		where r._Refs_key = a._Object_key 
 		and a._MGIType_key = 1 
 		and a._LogicalDB_key = 1 
-		and a.prefixPart = \'J:\' 
+		and a.prefixPart = 'J:' 
 		and a.preferred = 1
 		''', 'auto')
 
