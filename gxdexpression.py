@@ -17,7 +17,7 @@
 # History
 #
 # 02/05/2015	kstone
-#	- Initial add. Meant to replace Sybase stored procedure
+#	- Initial add. Meant to replace stored procedure
 #
 #
 '''
