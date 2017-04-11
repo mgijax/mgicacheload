@@ -72,7 +72,7 @@ eiErrorStatus = '%s     %s     %s\n'
 providerMap = {
 	'mgi' : 1,
 	'go' : 1,
-	'embl' : 9,
+	'embl' : 203,
 	'ec' : 8,
 	'pombase' : 115,
 	'interpro' : 28,
