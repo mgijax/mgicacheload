@@ -56,14 +56,26 @@ import os
 import getopt
 import string
 import re
-import mgi_utils
-import accessionlib
 import db
+import loadlib
+import accessionlib
+
+user = os.environ['MGD_DBUSER']
+passwordFileName = os.environ['MGD_DBPASSWORDFILE']
+outputDir = os.environ['MGICACHEBCPDIR']
+BCP_COMMAND = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
+
+accTable = 'ACC_Accession'
+accFile = ''            # file descriptor
+accFileName = outputDir + '/' + accTable + '.bcp'
+accKey = 0              # ACC_Accession._Accession_key
+mgiTypeKey = 25         # Annotation Evidence
+loaddate = loadlib.loaddate
+createdByKey = 1001
 
 objectKey = None
 createdBy = None
 
-execSQL = 'select ACC_insertNoChecks (1001,%d,\'%s\',%d,\'Annotation Evidence\',-1,1,1);'
 eiErrorStatus = '%s     %s     %s\n'
 
 # maps provider prefix to logical database key
@@ -72,8 +84,9 @@ eiErrorStatus = '%s     %s     %s\n'
 providerMap = {
 	'mgi' : 1,
 	'go' : 1,
-	'embl' : 203,
 	'ec' : 8,
+	'embl' : 9,
+	'gb' : 9,
 	'pombase' : 115,
 	'interpro' : 28,
 	'pir' : 78,
@@ -81,8 +94,12 @@ providerMap = {
 	'pr' : 135,
 	'protein_id' : 27,
 	'ncbi' : 27,
+	'hgnc' : 64,
+	'intact' : 205,
 	'refseq' : 27,
 	'rgd' : 47,
+	'rnacentral' : 204,
+	'genbank' : 9,
 	'uniprotkb-kw' : 111,
 	'sp_kw' : 111,
 	'sgd' : 114,
@@ -148,6 +165,7 @@ def init():
     # returns:
     #
 
+	global accFile, accKey
 	global objectKey, createdBy
 
 	try:
@@ -192,6 +210,14 @@ def init():
 		pass
         	#db.set_sqlLogFunction(db.sqlLogAll)
 
+        results = db.sql('select max(_Accession_key) + 1 as maxKey from ACC_Accession', 'auto')
+        accKey = results[0]['maxKey']
+
+        try:
+            accFile = open(accFileName, 'w')
+        except:
+            exit(1, 'Could not open file %s\n' % accFileName)
+
 def preCache():
 	#
 	# select the existing cache data into a temp table
@@ -208,22 +234,22 @@ def preCache():
 	#
 	# select existing cache data
 
-	cmd = 'select a._Accession_key, a.accID, a._Object_key ' + \
-		'INTO TEMPORARY TABLE toCheck ' + \
-		'from ACC_Accession a, VOC_Annot v, VOC_Evidence e, MGI_User u ' + \
-		'where a._MGIType_key = 25 ' + \
-		'and v._AnnotType_key = 1000 ' + \
-		'and v._Annot_key = e._Annot_key ' + \
-		'and a._Object_key = e._AnnotEvidence_key ' + \
-		'and e._CreatedBy_key = u._User_key '
+	cmd = '''select a._Accession_key, a.accID, a._Object_key 
+		INTO TEMPORARY TABLE toCheck 
+		from ACC_Accession a, VOC_Annot v, VOC_Evidence e, MGI_User u 
+		where a._MGIType_key = 25 
+		and v._AnnotType_key = 1000 
+		and v._Annot_key = e._Annot_key 
+		and a._Object_key = e._AnnotEvidence_key 
+		and e._CreatedBy_key = u._User_key '''
         
 	# select by object or created by
 
 	if objectKey > 0:
-		cmd = cmd + ' and v._Object_key = %s' % (objectKey)
+	    cmd = cmd + ' and v._Object_key = %s' % (objectKey)
 
 	elif createdBy is not None:
-		cmd = cmd + ' and u.login like \'%s\'' % (createdBy)
+	    cmd = cmd + ' and u.login like \'%s\'' % (createdBy)
 
 	db.sql(cmd, None)
 	db.sql('create index idx1 on toCheck(_Accession_key)', None)
@@ -231,20 +257,19 @@ def preCache():
 	# delete existing cache data
 
 	if objectKey >= 0 or createdBy is not None:
-		db.sql('delete from ACC_Accession using toCheck d ' + \
-			'where d._Accession_key = ACC_Accession._Accession_key', None)
-		db.commit()
+	    db.sql('delete from ACC_Accession using toCheck d where d._Accession_key = ACC_Accession._Accession_key', None)
+	    db.commit()
 
 	# copy existing cache table accession keys
 
 	elif objectKey == -1:
-		results = db.sql('select * from toCheck', 'auto')
-		for r in results:
-			key = r['_Object_key']
-			value = r['accID']
-			if key not in cacheIF:
-			   cacheIF[key] = []
-		        cacheIF[key].append(value)
+	    results = db.sql('select * from toCheck', 'auto')
+	    for r in results:
+	        key = r['_Object_key']
+		value = r['accID']
+		if key not in cacheIF:
+		    cacheIF[key] = []
+		cacheIF[key].append(value)
 
 def processCache():
 	#
@@ -254,6 +279,8 @@ def processCache():
 	# OR
 	# write out the checking errors
 	#
+
+	global accKey
 
 	# retrieve GO data in VOC_Evidence table
 
@@ -337,11 +364,13 @@ def processCache():
 
 				if objectKey >= 0 or createdBy is not None:
 					# by marker
-					addIt = execSQL % (key, accID, providerMap[provider])
-					db.sql(addIt, None)
-
-				# will do this only when we implement a bcp strategy
-				#elif objectKey == 0:
+					(prefixPart, numericPart) = accessionlib.split_accnum(accID)
+					if numericPart == None:
+						numericPart = ''
+        				accFile.write('%s|%s|%s|%s|%s|%d|%d|1|1|%s|%s|%s|%s\n' \
+            					% (accKey, accID, prefixPart, numericPart, providerMap[provider], 
+						   key, mgiTypeKey, createdByKey, createdByKey, loaddate, loaddate))
+					accKey = accKey + 1
 
 				# else, run the checker
 
@@ -362,6 +391,15 @@ def processCache():
 	if eiErrors != '':
 		# the EI will pick up the standard output via the ei/dsrc/PythonLib.d/PythonInferredFromCache code
 		print '\nThe following errors exist in the inferred-from text:\n\n' + eiErrors
+
+	#
+	# bcp files
+	#
+	accFile.close()
+	bcpCmd = '%s %s %s %s "/" %s "|" "\\n" mgd' % (BCP_COMMAND, db.get_sqlServer(), db.get_sqlDatabase(), accTable, accFileName)
+	db.commit()
+	print bcpCmd
+	os.system(bcpCmd)
 
 #
 #

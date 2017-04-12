@@ -3,7 +3,7 @@ DATE: 04/11/2017
 STAFF: lec
 CHANGES:
 TR12520/linkout for EMBL records in GO
-inferredfrom.py/embl = 203
+inferredfrom.py/added (embl,inact,rnacentral)
 
 TAG: mgicacheload-6-0-8-1
 DATE: 10/14/2016, 02/14/2017
