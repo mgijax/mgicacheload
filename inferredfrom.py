@@ -85,8 +85,6 @@ providerMap = {
 	'mgi' : 1,
 	'go' : 1,
 	'ec' : 8,
-	'embl' : 9,
-	'gb' : 9,
 	'pombase' : 115,
 	'interpro' : 28,
 	'pir' : 78,
@@ -99,7 +97,6 @@ providerMap = {
 	'refseq' : 27,
 	'rgd' : 47,
 	'rnacentral' : 204,
-	'genbank' : 9,
 	'uniprotkb-kw' : 111,
 	'sp_kw' : 111,
 	'sgd' : 114,
@@ -108,6 +105,9 @@ providerMap = {
 	'chebi' : 127,
 	'panther' : 147,
 	'ncbi_gene' : 160,
+	'embl' : 9,
+	'gb' : 9,
+	'genbank' : 9,
 	}
 
 #
@@ -357,10 +357,6 @@ def processCache():
 					if embl_result1 is None and embl_result2 is None:
 						eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
 						continue
-
-				# load the id into the accession cache
-				# for now, we will do this for a bulk load as well
-				#if objectKey = 0 or createdBy is not None:
 
 				if objectKey >= 0 or createdBy is not None:
 					# by marker
