@@ -18,6 +18,9 @@
 #
 # History
 #
+# 05/31/2017	lec
+#	- TR12250/Lit Triage
+#
 # 04/16/2014	lec
 #	- update usage to include -S and -D
 #	- coordinate with ei/dsrc/PythonReference
@@ -82,12 +85,10 @@ def process(objectKey):
 	cmd = '''select r._Refs_key, r.journal, s.name as reviewStatus, r.isReviewArticle, 
 		    coalesce(r.journal, \'\') || \' \' || coalesce(r.date, \'\') || \';\' || 
 		    coalesce(r.vol, \'\') || \'(\' || coalesce(r.issue, \'\') || '\):\' || 
-		    coalesce(r.pgs, \'\') 
-			as citation, 
+		    coalesce(r.pgs, \'\') as citation, 
 		    coalesce(r._primary, \'\') || \', \' || coalesce(r.journal, \'\') || \' \' || 
 		    coalesce(r.date, \'\') || \';\' || coalesce(r.vol, \'\') || \'(\' || 
-		    coalesce(r.issue, \'\') || \'):\' || coalesce(r.pgs, \'\') 
-			as short_citation
+		    coalesce(r.issue, \'\') || \'):\' || coalesce(r.pgs, \'\') as short_citation
 		    INTO TEMPORARY TABLE refsTemp
 		    from BIB_Refs r, BIB_ReviewStatus s
 		    where r._ReviewStatus_key = s._ReviewStatus_key 
@@ -158,6 +159,22 @@ def process(objectKey):
         for r in results:
 	    pubmed[r['_Object_key']] = r
 
+	#
+	# doi ids
+	#
+
+        results = db.sql('''select a._Object_key, a.accID 
+		from refsTemp r, ACC_Accession a 
+		where r._Refs_key = a._Object_key 
+		and a._MGIType_key = 1 
+		and a._LogicalDB_key = 65 
+		and a.preferred = 1
+		''', 'auto')
+
+	doi = {}
+        for r in results:
+	    doi[r['_Object_key']] = r
+
 	# process all records
 
 	results = db.sql('select * from refsTemp', 'auto')
@@ -182,6 +199,11 @@ def process(objectKey):
 
 		if pubmed.has_key(key):
 		    cacheBCP.write(mgi_utils.prvalue(pubmed[key]['accID']) + COLDL)
+                else:
+		    cacheBCP.write(COLDL)
+
+		if doi.has_key(key):
+		    cacheBCP.write(mgi_utils.prvalue(doi[key]['accID']) + COLDL)
                 else:
 		    cacheBCP.write(COLDL)
 
@@ -216,6 +238,11 @@ def process(objectKey):
                 else:
 		    pubmedID = 'null'
 
+	        if doi.has_key(key):
+		    doiID = doi[key]['accID']
+                else:
+		    doiID = 'null'
+
 		# TR 10037/remove quotes from citations
 		citation = string.replace(r['citation'], '"', '')
 		short_citation = string.replace(r['short_citation'], '"', '')
@@ -228,6 +255,7 @@ def process(objectKey):
 		    mgi_utils.prvalue(jnum[key]['accID']), \
 	            mgi_utils.prvalue(mgi[key]['accID']), \
 		    mgi_utils.prvalue(pubmedID), \
+		    mgi_utils.prvalue(doiID), \
 	            mgi_utils.prvalue(r['reviewStatus']), \
 		    mgi_utils.prvalue(r['journal']), \
 		    mgi_utils.prvalue(citation), \
