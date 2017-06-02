@@ -82,7 +82,7 @@ def process(objectKey):
 	# reference attributes
 	#
 
-	cmd = '''select r._Refs_key, r.journal, s.name as reviewStatus, r.isReviewArticle, 
+	cmd = '''select r._Refs_key, r.journal, s.term as referenceType, r.isReviewArticle, 
 		    coalesce(r.journal, \'\') || \' \' || coalesce(r.date, \'\') || \';\' || 
 		    coalesce(r.vol, \'\') || \'(\' || coalesce(r.issue, \'\') || '\):\' || 
 		    coalesce(r.pgs, \'\') as citation, 
@@ -90,8 +90,8 @@ def process(objectKey):
 		    coalesce(r.date, \'\') || \';\' || coalesce(r.vol, \'\') || \'(\' || 
 		    coalesce(r.issue, \'\') || \'):\' || coalesce(r.pgs, \'\') as short_citation
 		    INTO TEMPORARY TABLE refsTemp
-		    from BIB_Refs r, BIB_ReviewStatus s
-		    where r._ReviewStatus_key = s._ReviewStatus_key 
+		    from BIB_Refs r, VOC_Term s
+		    where r._ReferenceType_key = s._Term_key 
 		    '''
 
 	if objectKey > 0:
@@ -207,10 +207,10 @@ def process(objectKey):
                 else:
 		    cacheBCP.write(COLDL)
 
-	        cacheBCP.write(mgi_utils.prvalue(r['reviewStatus']) + COLDL + \
-			       mgi_utils.prvalue(r['journal']) + COLDL + \
+	        cacheBCP.write(mgi_utils.prvalue(r['journal']) + COLDL + \
 			       mgi_utils.prvalue(r['citation']) + COLDL + \
 			       mgi_utils.prvalue(r['short_citation']) + COLDL + \
+		               mgi_utils.prvalue(r['referenceType']) + COLDL + \
 			       mgi_utils.prvalue(r['isReviewArticle']) + COLDL + \
 			       isReviewArticle + LINEDL)
 	        cacheBCP.flush()
