@@ -57,7 +57,7 @@ try:
 except:
     outDir = ''
 
-insertSQL = '''insert into BIB_Citation_Cache values (%s,%s,'%s','%s','%s','%s','%s','%s','%s',%s,'%s')'''
+insertSQL = '''insert into BIB_Citation_Cache values (%s,%s,'%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')'''
 
 def showUsage():
 	'''
@@ -256,10 +256,10 @@ def process(objectKey):
 	            mgi_utils.prvalue(mgi[key]['accID']), \
 		    mgi_utils.prvalue(pubmedID), \
 		    mgi_utils.prvalue(doiID), \
-	            mgi_utils.prvalue(r['reviewStatus']), \
 		    mgi_utils.prvalue(r['journal']), \
 		    mgi_utils.prvalue(citation), \
 		    mgi_utils.prvalue(short_citation),
+	            mgi_utils.prvalue(r['referenceType']), \
 		    mgi_utils.prvalue(r['isReviewArticle']),
 		    mgi_utils.prvalue(isReviewArticle)), None)
 
