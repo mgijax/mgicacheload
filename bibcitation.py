@@ -236,12 +236,12 @@ def process(objectKey):
 	        if pubmed.has_key(key):
 		    pubmedID = pubmed[key]['accID']
                 else:
-		    pubmedID = 'null'
+		    pubmedID = ''
 
 	        if doi.has_key(key):
 		    doiID = doi[key]['accID']
                 else:
-		    doiID = 'null'
+		    doiID = ''
 
 		# TR 10037/remove quotes from citations
 		citation = string.replace(r['citation'], '"', '')
