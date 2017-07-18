@@ -197,6 +197,8 @@ def process(objectKey):
 		if jnum.has_key(key):
 		    cacheBCP.write(mgi_utils.prvalue(jnum[key]['numericPart']) + COLDL + \
 			     mgi_utils.prvalue(jnum[key]['accID']) + COLDL)
+		else:
+		    cacheBCP.write(COLDL + COLDL)
 
                 cacheBCP.write(mgi_utils.prvalue(mgi[key]['accID']) + COLDL)
 
