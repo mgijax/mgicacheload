@@ -192,10 +192,13 @@ def process(objectKey):
                 else:
 		    isReviewArticle = 'No'
 
-	        cacheBCP.write(mgi_utils.prvalue(key) + COLDL + \
-			     mgi_utils.prvalue(jnum[key]['numericPart']) + COLDL + \
-			     mgi_utils.prvalue(jnum[key]['accID']) + COLDL + \
-			     mgi_utils.prvalue(mgi[key]['accID']) + COLDL)
+	        cacheBCP.write(mgi_utils.prvalue(key) + COLDL)
+
+		if jnum.has_key(key):
+		    cacheBCP.write(mgi_utils.prvalue(jnum[key]['numericPart']) + COLDL + \
+			     mgi_utils.prvalue(jnum[key]['accID']) + COLDL)
+
+                cacheBCP.write(mgi_utils.prvalue(mgi[key]['accID']) + COLDL)
 
 		if pubmed.has_key(key):
 		    cacheBCP.write(mgi_utils.prvalue(pubmed[key]['accID']) + COLDL)
