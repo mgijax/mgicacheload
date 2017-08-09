@@ -82,7 +82,9 @@ def process(objectKey):
 	# reference attributes
 	#
 
-	cmd = '''select r._Refs_key, r.journal, s.term as referenceType, r.isReviewArticle, 
+	cmd = '''select r._Refs_key, r.journal, s.term as referenceType, 
+	            r.isReviewArticle, 
+		    r.isDiscard,
 		    coalesce(r.journal, \'\') || \' \' || coalesce(r.date, \'\') || \';\' || 
 		    coalesce(r.vol, \'\') || \'(\' || coalesce(r.issue, \'\') || '\):\' || 
 		    coalesce(r.pgs, \'\') as citation, 
@@ -217,7 +219,8 @@ def process(objectKey):
 			       mgi_utils.prvalue(r['short_citation']) + COLDL + \
 		               mgi_utils.prvalue(r['referenceType']) + COLDL + \
 			       mgi_utils.prvalue(r['isReviewArticle']) + COLDL + \
-			       isReviewArticle + LINEDL)
+			       isReviewArticle + COLDL + \
+			       mgi_utils.prvalue(r['isDiscard']) + LINEDL)
 	        cacheBCP.flush()
 
 	    cacheBCP.close()
@@ -266,7 +269,8 @@ def process(objectKey):
 		    mgi_utils.prvalue(short_citation),
 	            mgi_utils.prvalue(r['referenceType']), \
 		    mgi_utils.prvalue(r['isReviewArticle']),
-		    mgi_utils.prvalue(isReviewArticle)), None)
+		    mgi_utils.prvalue(isReviewArticle),
+		    mgi_utils.prvalue(r['isDiscard'])), None)
 
 	        db.commit()
 
