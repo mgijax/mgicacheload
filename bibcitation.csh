@@ -5,6 +5,9 @@
 #
 # History
 #
+# 08/10/2017	lec
+#	- TR12250/Lit Triage
+#	
 # 10/19/2006	lec
 #	- TR 6812;new
 #
@@ -20,27 +23,19 @@ touch $LOG
 
 date | tee -a ${LOG}
 
-# Create the bcp file
-./bibcitation.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} |& tee -a ${LOG}
-
-# Exit if bcp file is empty
-echo "---Ensure BCP file is not empty"
-if ( -z ${MGICACHEBCPDIR}/${TABLE}.bcp ) then
-echo 'BCP File is empty' | tee -a ${LOG}
-exit 0
-endif
-
-# truncate table
-echo "---Truncating table"
-${SCHEMADIR}/table/${TABLE}_truncate.object | tee -a ${LOG}
-
 # Drop indexes
 ${SCHEMADIR}/index/${TABLE}_drop.object | tee -a ${LOG}
 
-# BCP new data into tables
-${BCP_CMD} ${TABLE} ${MGICACHEBCPDIR} ${TABLE}.bcp ${COLDELIM} ${LINEDELIM} ${PG_DB_SCHEMA} | tee -a ${LOG}
+cat - <<EOSQL | ${PG_DBUTILS}/bin/doisql.csh $0
+select * from BIB_reloadCache(-1);
+EOSQL
 
 # Create indexes
 ${SCHEMADIR}/index/${TABLE}_create.object | tee -a ${LOG}
+
+cat - <<EOSQL | ${PG_DBUTILS}/bin/doisql.csh $0
+select count(*) from BIB_Refs;
+select count(*) from BIB_Citation_Cache;
+EOSQL
 
 date | tee -a ${LOG}
