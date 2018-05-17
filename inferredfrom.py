@@ -108,6 +108,7 @@ providerMap = {
 	'embl' : 9,
 	'gb' : 9,
 	'genbank' : 9,
+	'complexportal' : 211,
 	}
 
 #
