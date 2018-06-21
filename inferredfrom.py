@@ -338,7 +338,7 @@ def processCache():
 				if accID == '':
 				    continue
 
-				# MGI, GO and RGD IDs are stored
+				# MGI, GO, RGD, PR IDs are stored
 				# with the MGI:,  GO: and RGD: prefixes
 				# for all others, we do not store the ##: part
 
@@ -347,7 +347,7 @@ def processCache():
 		    		provider = tokens[0].lower()
 		    		accIDPart = tokens[1]
 
-		        	if provider != 'mgi' and provider != 'go' and provider != 'rgd':
+		        	if provider not in ['mgi', 'go', 'rgd', 'pr']:
 					accID = accIDPart
 
 				# for EMBL ids, check if accession id is valid
