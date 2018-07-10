@@ -109,6 +109,7 @@ providerMap = {
 	'gb' : 9,
 	'genbank' : 9,
 	'complexportal' : 211,
+	'ensembl_geneid' : 214,
 	}
 
 #

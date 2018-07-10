@@ -1,3 +1,8 @@
+TAG: mgicacheload-6-0-12-4
+DATE: 07/10/2018
+STAFF: lec
+CHANGES: TR12897/add ENSEMBL_GeneID to the allowed providers
+
 TAG: mgicacheload-6-0-12-3
 DATE: 06/21/2018
 STAFF: lec
