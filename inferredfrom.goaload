@@ -19,6 +19,5 @@ touch $LOG
 date | tee -a ${LOG}
 
 ./inferredfrom.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -B"GOA_%" |& tee -a ${LOG}
-./inferredfrom.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -B"ENSEMBL_GeneID" |& tee -a ${LOG}
 
 date | tee -a ${LOG}
