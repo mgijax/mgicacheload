@@ -6,14 +6,13 @@
 
 cd `dirname $0` && source ./Configuration
 
-echo "Running cacheload unit tests"
-cd unittest
-./all_tests.csh
-if ( $status ) then
-    exit 1
-endif
-
-cd ..
+#echo "Running cacheload unit tests"
+#cd unittest
+#./all_tests.csh
+#if ( $status ) then
+#    exit 1
+#endif
+#cd ..
 
 if ( ! -d ${MGICACHEDIR} ) then
 	mkdir -p ${MGICACHEDIR}
