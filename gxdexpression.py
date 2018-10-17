@@ -38,6 +38,7 @@ try:
 
 except:
     outDir = ''
+    db.setTrace()
 
 ### Constants ###
 
@@ -67,7 +68,9 @@ CACHE_FIELDS = [
 	('_stage_key','%s'),
 	('_specimen_key','%s'),
 	('_gellane_key','%s'),
+	('resultNote','\'%s\''),
 	('expressed','%s'),
+	('strength','\'%s\''),
 	('age','\'%s\''),
 	('agemin','%s'),
 	('agemax','%s'),
@@ -210,6 +213,7 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 		s._specimen_key,
 		s.sex,
 		ir._result_key,
+		trim(ir.resultNote) as resultNote,
 		ip._imagepane_key,
 		i._image_key,
 		i.xDim as image_xdim,
@@ -371,7 +375,7 @@ def generateCacheResults(dbResultGroups, assayResultMap):
 
 		# compute extra cache fields
 
-		expressed = computeExpressedFlag(group)
+		expressed, allstrength = computeExpressedFlag(group)
 		isforgxd = computeIsForGxd(group)
 		isrecombinase = computeIsRecombinase(group)
 
@@ -380,6 +384,16 @@ def generateCacheResults(dbResultGroups, assayResultMap):
 
 		# check specimen key
 		_specimen_key = rep.has_key('_specimen_key')  and rep['_specimen_key'] or None
+		resultNote = ''
+		if _specimen_key is not None:
+		    if rep['resultNote'] is not None:
+		        resultNote = rep['resultNote']
+                        resultNote = resultNote.replace('\\', '\\\\')
+                        resultNote = resultNote.replace('#', '\#')
+                        resultNote = resultNote.replace('?', '\?')
+                        resultNote = resultNote.replace('\r', '\\r')
+                        resultNote = resultNote.replace('\n', '\\n')
+                        resultNote = resultNote.replace('|', '\|')
 
 		# check gellane key
 		_gellane_key = rep.has_key('_gellane_key')  and rep['_gellane_key'] or None
@@ -394,7 +408,9 @@ def generateCacheResults(dbResultGroups, assayResultMap):
 			rep['_stage_key'],
 			_specimen_key,
 			_gellane_key,
+			resultNote,
 			expressed,
+			allstrength,
 			rep['age'],
 			rep['agemin'],
 			rep['agemax'],
@@ -411,11 +427,16 @@ def computeExpressedFlag(dbResults):
 	based on a group of database results	
 	@unittested
 	"""
+
+	expressed = 0
+	strengths = []
+
 	for r in dbResults:
 		if r['strength'] not in ['Absent', 'Not Applicable']:
-			return 1
-			
-	return 0
+			expressed = 1
+	        strengths.append(r['strength'])
+
+	return expressed, ','.join(strengths)
 
 def computeIsForGxd(dbResults):
 	"""
