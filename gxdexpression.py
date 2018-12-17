@@ -434,7 +434,12 @@ def computeExpressedFlag(dbResults):
 	for r in dbResults:
 		if r['strength'] not in ['Absent', 'Not Applicable']:
 			expressed = 1
+<<<<<<< HEAD
 	        strengths.append(r['strength'])
+=======
+		if r['strength'] not in strengths:
+	        	strengths.append(r['strength'])
+>>>>>>> master
 
 	return expressed, ','.join(strengths)
 
