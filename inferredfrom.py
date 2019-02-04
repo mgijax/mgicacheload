@@ -113,6 +113,22 @@ providerMap = {
 	}
 
 #
+# ignore these providers
+#
+providerIgnore = [
+	'cgd',
+	'dictybase',
+	'ecogene',
+	'fb',
+	'pmid',
+	'tair',
+	'uniprotid',
+	'wb',
+	'xenbase',
+	'zfin'
+]
+
+#
 # checks for EMBL accession ids (see ACC_Accession_Insert trigger)
 #
 #	1 alpah, 5 numerics: [A-Z]     [0-9][0-9][0-9][0-9][0-9]
@@ -350,6 +366,11 @@ def processCache():
 
 		        	if provider not in ['mgi', 'go', 'rgd', 'pr']:
 					accID = accIDPart
+
+				if provider in providerIgnore:
+					# just skip it
+					#print 'skip: ', provider
+					continue
 
 				# for EMBL ids, check if accession id is valid
 
