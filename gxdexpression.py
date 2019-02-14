@@ -394,6 +394,7 @@ def generateCacheResults(dbResultGroups, assayResultMap):
                         resultNote = resultNote.replace('\r', '\\r')
                         resultNote = resultNote.replace('\n', '\\n')
                         resultNote = resultNote.replace('|', '\|')
+                        resultNote = resultNote.replace("'s", '"''s")
 
 		# check gellane key
 		_gellane_key = rep.has_key('_gellane_key')  and rep['_gellane_key'] or None

@@ -1,3 +1,9 @@
+TAG: mgicacheload-6-0-13-2
+DATE: 02/14/2019
+STAFF: lec
+CHANGES: 
+TR13023/resultNotes may contains "'"; needs to be escacped properly
+
 TAG: mgicacheload-6-0-13-1
 DATE: 02/04/2019
 STAFF: lec
