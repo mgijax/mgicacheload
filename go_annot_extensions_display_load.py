@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 """
 Load the cache of notes
     representing the display values for 
@@ -325,9 +324,9 @@ def transformProperties(properties,
         value = property['value']
 
 
-    	### IDs that we link and map to voc terms ###
+        ### IDs that we link and map to voc terms ###
         
-    	if GO_regex.match(value):
+        if GO_regex.match(value):
             
             id = value
             if id in termIDMap:
