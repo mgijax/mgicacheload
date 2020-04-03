@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 """
 Load the cache of notes
     representing the display values for 
@@ -191,7 +190,7 @@ def _createTempIDTable(properties):
     db.sql(createTempTable, None)
     
     # write a BCP file to insert into temp table
-    temp = tempfile.NamedTemporaryFile()
+    temp = tempfile.NamedTemporaryFile(mode="w")
     try:
     
         for property in properties:
@@ -325,9 +324,9 @@ def transformProperties(properties,
         value = property['value']
 
 
-    	### IDs that we link and map to voc terms ###
+        ### IDs that we link and map to voc terms ###
         
-    	if GO_regex.match(value):
+        if GO_regex.match(value):
             
             id = value
             if id in termIDMap:

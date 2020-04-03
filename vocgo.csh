@@ -21,7 +21,7 @@ touch $LOG
 date | tee -a ${LOG}
 
 # Create the bcp file
-./vocgo.py | tee -a ${LOG}
+${PYTHON} ./vocgo.py | tee -a ${LOG}
 
 # Exit if bcp file is empty
 
