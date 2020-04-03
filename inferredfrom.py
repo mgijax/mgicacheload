@@ -70,7 +70,7 @@ mgiTypeKey = 25         # Annotation Evidence
 loaddate = loadlib.loaddate
 createdByKey = 1001
 
-objectKey = None
+objectKey = -1
 createdBy = None
 
 eiErrorStatus = '%s     %s     %s\n'
@@ -213,7 +213,7 @@ def init():
            database is None or \
            user is None or \
            password is None or \
-           (objectKey is None and createdBy is None):
+           (objectKey < 0 and createdBy is None):
                 showUsage()
 
         db.set_sqlLogin(user, password, server, database)
