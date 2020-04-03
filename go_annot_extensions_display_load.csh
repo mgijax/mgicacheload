@@ -19,7 +19,7 @@ date | tee -a ${LOG}
 
 # Run the cache load
 echo "---Running annotation extensions display link note cache load"
-${PYTHON} ./go_annot_extensions_display_load.py  |& tee -a ${LOG} || exit 1;
+./go_annot_extensions_display_load.py  |& tee -a ${LOG} || exit 1;
 
 
 date | tee -a ${LOG}

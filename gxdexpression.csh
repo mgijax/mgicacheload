@@ -22,7 +22,7 @@ date | tee -a ${LOG}
 
 # Create the bcp file
 echo "---Creating BCP file"
-${PYTHON} ./gxdexpression.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} |& tee -a ${LOG}
+./gxdexpression.py -S${MGD_DBSERVER} -D${MGD_DBNAME} -U${MGD_DBUSER} -P${MGD_DBPASSWORDFILE} -K${OBJECTKEY} |& tee -a ${LOG}
 
 # Exit if bcp file is empty
 echo "---Ensure BCP file is not empty"

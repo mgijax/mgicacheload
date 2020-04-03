@@ -1,3 +1,4 @@
+#!/usr/local/bin/python
 """
 Load the cache of notes
     representing the display values for 
