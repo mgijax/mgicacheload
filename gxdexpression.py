@@ -5,17 +5,17 @@
 # Create bcp file for GXD_Expression cache table
 #
 # Usage:
-#	gxdexpression.py -Sserver -Ddbname -Uuser -Ppasswordfile -Kassaykey
+#       gxdexpression.py -Sserver -Ddbname -Uuser -Ppasswordfile -Kassaykey
 #
-#	if assaykey == 0, then create BCP file for all assays
-#	if assaykey > 0, then update cache for only the assay specified by key
-#		
+#       if assaykey == 0, then create BCP file for all assays
+#       if assaykey > 0, then update cache for only the assay specified by key
+#               
 # Processing:
 #
 # History
 #
-# 02/05/2015	kstone
-#	- Initial add. Meant to replace stored procedure
+# 02/05/2015    kstone
+#       - Initial add. Meant to replace stored procedure
 #
 #
 '''
@@ -311,7 +311,7 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
                 left outer join
                 voc_term reporter on
                         reporter._term_key = a._reportergene_key
-        %s	
+        %s      
         ''' % (where)
 
 
@@ -380,21 +380,28 @@ def generateCacheResults(dbResultGroups, assayResultMap):
                 hasimage = computeHasImage(allResultsForAssay)
 
                 # check specimen key
-                _specimen_key = '_specimen_key' in rep  and rep['_specimen_key'] or None
                 resultNote = ''
-                if _specimen_key is not None:
-                    if rep['resultNote'] is not None:
-                        resultNote = rep['resultNote']
-                        resultNote = resultNote.replace('\\', '\\\\')
-                        resultNote = resultNote.replace('#', '\#')
-                        resultNote = resultNote.replace('?', '\?')
-                        resultNote = resultNote.replace('\r', '\\r')
-                        resultNote = resultNote.replace('\n', '\\n')
-                        resultNote = resultNote.replace('|', '\|')
-                        resultNote = resultNote.replace("'s", "''s")
+
+                try:
+                    _specimen_key = rep['_specimen_key']
+                    if _specimen_key is not None:
+                        if rep['resultNote'] is not None:
+                            resultNote = rep['resultNote']
+                            resultNote = resultNote.replace('\\', '\\\\')
+                            resultNote = resultNote.replace('#', '\#')
+                            resultNote = resultNote.replace('?', '\?')
+                            resultNote = resultNote.replace('\r', '\\r')
+                            resultNote = resultNote.replace('\n', '\\n')
+                            resultNote = resultNote.replace('|', '\|')
+                            resultNote = resultNote.replace("'s", "''s")
+                except:
+                    _specimen_key = ''
 
                 # check gellane key
-                _gellane_key = '_gellane_key' in rep  and rep['_gellane_key'] or None
+                try:
+                    _gellane_key = rep['_gellane_key']
+                except:
+                    _gellane_key = ''
 
                 results.append([
                         rep['_assay_key'],
@@ -422,7 +429,7 @@ def generateCacheResults(dbResultGroups, assayResultMap):
 def computeExpressedFlag(dbResults):
         """
         compute an expressed flag
-        based on a group of database results	
+        based on a group of database results    
         @unittested
         """
 
@@ -440,7 +447,7 @@ def computeExpressedFlag(dbResults):
 def computeIsForGxd(dbResults):
         """
         compute an isforgxd flag
-        based on a group of database results	
+        based on a group of database results    
         @unittested
         """
         if dbResults  \
@@ -452,7 +459,7 @@ def computeIsForGxd(dbResults):
 def computeIsRecombinase(dbResults):
         """
         compute an isrecombinase flag
-        based on a group of database results	
+        based on a group of database results    
         @unittested
         """
         if dbResults:
@@ -468,7 +475,7 @@ def computeIsRecombinase(dbResults):
 def computeHasImage(dbResults):
         """
         compute a hasimage flag
-        based on a group of database results	
+        based on a group of database results    
         @unittested
         """
         for r in dbResults:
@@ -496,7 +503,7 @@ def createFullBCPFile():
         # batches of assays to process at a time
         batchSize = ASSAY_BATCH_SIZE
 
-        numBatches = (maxAssayKey / batchSize) + 1
+        numBatches = int((maxAssayKey / batchSize) + 1)
 
         startingCacheKey = 1
         for i in range(numBatches):
@@ -564,7 +571,7 @@ def updateSingleAssay(assayKey):
         # check for either gel data or insitu data
         # fetch the appropriate database results
         # merge them into groups by unique cache keys
-        #	e.g. _result_key + _emapa_term_key + _stage_key for insitus
+        #       e.g. _result_key + _emapa_term_key + _stage_key for insitus
 
         dbResults = []
         resultGroups = []
@@ -599,7 +606,7 @@ def _fetchIsAssayGel(assayKey):
                         t._assaytype_key = a._assaytype_key
             where _assay_key = %s
         ''' % assayKey
-        results = db.sql(isgelSql, 'auto')	
+        results = db.sql(isgelSql, 'auto')      
         isgel = 0
         if results:
             isgel = results[0]['isgelassay']
