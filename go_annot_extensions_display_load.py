@@ -190,7 +190,7 @@ def _createTempIDTable(properties):
     db.sql(createTempTable, None)
     
     # write a BCP file to insert into temp table
-    temp = tempfile.NamedTemporaryFile()
+    temp = tempfile.NamedTemporaryFile(mode="w")
     try:
     
         for property in properties:
