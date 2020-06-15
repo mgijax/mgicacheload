@@ -310,6 +310,7 @@ def processCache():
                 and ta._MGIType_key = 13 
                 and ta.preferred = 1 
                 and e._CreatedBy_key = u._User_key
+                and e._AnnotEvidence_key = 677419787
                 '''
 
         # select data by specific marker or by created by
@@ -360,6 +361,10 @@ def processCache():
                                 tokens = accID.split(':')
                                 provider = tokens[0].lower()
                                 accIDPart = tokens[1]
+
+                                if accIDPart == '':
+                                        eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
+                                        continue
 
                                 if provider not in ['mgi', 'go', 'rgd', 'pr']:
                                         accID = accIDPart
@@ -412,10 +417,10 @@ def processCache():
         # bcp files
         #
         accFile.close()
-        bcpCmd = '%s %s %s %s "/" %s "|" "\\n" mgd' % (BCP_COMMAND, db.get_sqlServer(), db.get_sqlDatabase(), accTable, accFileName)
-        db.commit()
-        print(bcpCmd)
-        os.system(bcpCmd)
+        #bcpCmd = '%s %s %s %s "/" %s "|" "\\n" mgd' % (BCP_COMMAND, db.get_sqlServer(), db.get_sqlDatabase(), accTable, accFileName)
+        #db.commit()
+        #print(bcpCmd)
+        #os.system(bcpCmd)
 
 #
 #
