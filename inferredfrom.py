@@ -364,6 +364,10 @@ def processCache():
 		    		provider = tokens[0].lower()
 		    		accIDPart = tokens[1]
 
+                                if accIDPart == '':
+                                        eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
+                                        continue
+
 		        	if provider not in ['mgi', 'go', 'rgd', 'pr']:
 					accID = accIDPart
 
