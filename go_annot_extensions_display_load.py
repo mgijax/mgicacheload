@@ -13,6 +13,9 @@ import db
 import mgi_utils
 import go_annot_extensions
 
+# to help when debugging
+#db.setTrace()
+
 USAGE="""
 usage: %prog [-S -D -U -P -K]
 """
@@ -150,6 +153,7 @@ def _queryAnnotExtensions(evidenceKey=None,
             vep._annotevidence_key = ve._annotevidence_key
         where ve._evidenceterm_key in (%s)
             and vep._propertyterm_key in (%s)
+            and vep.value != ''
         %s
         %s
     ''' % (evidenceTermKeyClause, \
