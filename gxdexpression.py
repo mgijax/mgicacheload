@@ -383,7 +383,7 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                 if isFull == 1:
                         resultNote = ''
                 else:
-                        resultNote = 'null'
+                        resultNote = "''"
 
                 try:
                     _specimen_key = rep['_specimen_key']
