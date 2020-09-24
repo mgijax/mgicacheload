@@ -356,7 +356,7 @@ def mergeGelResults(dbResults):
         """
         return list(groupResultsBy(dbResults, ['_gellane_key','_emapa_term_key', '_stage_key']).values())
 
-def generateCacheResults(dbResultGroups, assayResultMap):
+def generateCacheResults(isFull, dbResultGroups, assayResultMap):
         """
         transforms groups of database results
         returns list of cache records
@@ -380,7 +380,10 @@ def generateCacheResults(dbResultGroups, assayResultMap):
                 hasimage = computeHasImage(allResultsForAssay)
 
                 # check specimen key
-                resultNote = ''
+                if isFull == 1:
+                        resultNote = ''
+                else:
+                        resultNote = 'null'
 
                 try:
                     _specimen_key = rep['_specimen_key']
@@ -395,13 +398,19 @@ def generateCacheResults(dbResultGroups, assayResultMap):
                             resultNote = resultNote.replace('|', '\|')
                             resultNote = resultNote.replace("'s", "''s")
                 except:
-                    _specimen_key = ''
+                    if isFull == 1:
+                        _specimen_key = ''
+                    else:
+                        _specimen_key = 'null'
 
                 # check gellane key
                 try:
                     _gellane_key = rep['_gellane_key']
                 except:
-                    _gellane_key = ''
+                    if isFull == 1:
+                        _gellane_key = ''
+                    else:
+                        _gellane_key = 'null'
 
                 results.append([
                         rep['_assay_key'],
@@ -525,7 +534,7 @@ def createFullBCPFile():
 
                 # use groups of DB results to compute cache columns
                 # and create the actual cache records
-                results = generateCacheResults(resultGroups, assayResultMap)
+                results = generateCacheResults(1, resultGroups, assayResultMap)
 
                 # write/append found results to BCP file
                 _writeToBCPFile(results, startingKey=startingCacheKey)
@@ -587,7 +596,7 @@ def updateSingleAssay(assayKey):
         # use groups of DB results to compute cache columns
         # and create the actual cache records
         assayResultMap = {assayKey: dbResults}
-        results = generateCacheResults(resultGroups, assayResultMap)
+        results = generateCacheResults(0, resultGroups, assayResultMap)
         
         # perform live update on found results
         _updateExpressionCache(assayKey, results)

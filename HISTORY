@@ -1,3 +1,10 @@
+TAG: mgicacheload-6-0-16-3
+DATE: 09/24/2020
+STAFF: lec
+TR13204/Infrastructure Release
+gxdexpression.py
+full vs single : '' vs 'null' for null fields
+
 TAG: mgicacheload-6-0-16-2
 DATE: 09/23/2020
 STAFF: lec
