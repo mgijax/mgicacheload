@@ -380,10 +380,7 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                 hasimage = computeHasImage(allResultsForAssay)
 
                 # check specimen key
-                if isFull == 1:
-                        resultNote = ''
-                else:
-                        resultNote = "''"
+                resultNote = ''
 
                 try:
                     _specimen_key = rep['_specimen_key']
