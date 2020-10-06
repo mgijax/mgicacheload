@@ -418,10 +418,10 @@ def processCache():
         # bcp files
         #
         accFile.close()
-        #bcpCmd = '%s %s %s %s "/" %s "|" "\\n" mgd' % (BCP_COMMAND, db.get_sqlServer(), db.get_sqlDatabase(), accTable, accFileName)
-        #db.commit()
-        #print(bcpCmd)
-        #os.system(bcpCmd)
+        bcpCmd = '%s %s %s %s "/" %s "|" "\\n" mgd' % (BCP_COMMAND, db.get_sqlServer(), db.get_sqlDatabase(), accTable, accFileName)
+        db.commit()
+        print(bcpCmd)
+        os.system(bcpCmd)
 
 #
 #
