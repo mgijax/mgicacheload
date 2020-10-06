@@ -57,6 +57,8 @@ import db
 import loadlib
 import accessionlib
 
+db.setTrace()
+
 user = os.environ['MGD_DBUSER']
 passwordFileName = os.environ['MGD_DBPASSWORDFILE']
 outputDir = os.environ['MGICACHEBCPDIR']
@@ -310,7 +312,6 @@ def processCache():
                 and ta._MGIType_key = 13 
                 and ta.preferred = 1 
                 and e._CreatedBy_key = u._User_key
-                and e._AnnotEvidence_key = 677419787
                 '''
 
         # select data by specific marker or by created by
