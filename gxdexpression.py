@@ -14,6 +14,10 @@
 #
 # History
 #
+# 09/21/2021    sc
+#       - YAKS project, expression cell type annotation
+#         add cell type to cache
+#
 # 02/05/2015    kstone
 #       - Initial add. Meant to replace stored procedure
 #
@@ -62,6 +66,7 @@ CACHE_FIELDS = [
         ('_genotype_key','%s'),
         ('_marker_key','%s'),
         ('_emapa_term_key','%s'),
+        ('_celltype_term_key','%s'),
         ('_stage_key','%s'),
         ('_specimen_key','%s'),
         ('_gellane_key','%s'),
@@ -202,6 +207,7 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
                 s._genotype_key,
                 a._marker_key,
                 irs._emapa_term_key,
+                ct._celltype_term_key,
                 irs._stage_key,
                 strength.strength,
                 s.age,
@@ -245,12 +251,15 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
                 left outer join
                 voc_term reporter on
                         reporter._term_key = a._reportergene_key
+                left outer join
+                gxd_isresultcelltype ct on
+                         ct._result_key = ir._result_key
         %(where)s
         ''' % {'where':where, 'drivernote_type_key': DRIVER_NOTE_TYPE_KEY}
 
         results = db.sql(insituSql, 'auto')
 
-        #print "got %d results" % len(results)
+        #print("got %d results" % len(results))
         return results
 
 def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
@@ -276,6 +285,7 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
                 gl._genotype_key,
                 a._marker_key,
                 gls._emapa_term_key,
+                null as _celltype_term_key,
                 gls._stage_key,
                 strength.strength,
                 gl.age,
@@ -316,7 +326,7 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 
 
         results = db.sql(gelSql, 'auto')
-        #print "got %d results" % len(results)
+        #print("got %d results" % len(results))
 
         return results
 
@@ -327,13 +337,12 @@ def groupResultsBy(dbResults, columns):
         returns dictionary of columns to results
         """
         resultMap = {}
-
         # group database results by cache uniqueness
         for dbResult in dbResults:
                 if len(columns) == 1:
-                        key = dbResult[columns[0]]
+                    key = dbResult[columns[0]]
                 else:
-                        key = tuple(dbResult[k] for k in columns)
+                    key = tuple(dbResult[k] for k in columns)
                 resultMap.setdefault(key, []).append(dbResult)
 
         return resultMap
@@ -346,7 +355,7 @@ def mergeInsituResults(dbResults):
         returns list result groups
         """
 
-        return list(groupResultsBy(dbResults, ['_specimen_key','_emapa_term_key', '_stage_key']).values())
+        return list(groupResultsBy(dbResults, ['_specimen_key','_emapa_term_key', '_stage_key', '_celltype_term_key']).values())
 
 def mergeGelResults(dbResults):
         """
@@ -354,7 +363,7 @@ def mergeGelResults(dbResults):
         by uniqueness of cache fields,
         returns list result groups
         """
-        return list(groupResultsBy(dbResults, ['_gellane_key','_emapa_term_key', '_stage_key']).values())
+        return list(groupResultsBy(dbResults, ['_gellane_key','_emapa_term_key', '_stage_key', '_celltype_term_key']).values())
 
 def generateCacheResults(isFull, dbResultGroups, assayResultMap):
         """
@@ -416,6 +425,7 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                         rep['_genotype_key'],
                         rep['_marker_key'],
                         rep['_emapa_term_key'],
+                        rep['_celltype_term_key'],
                         rep['_stage_key'],
                         _specimen_key,
                         _gellane_key,
@@ -516,10 +526,11 @@ def createFullBCPFile():
                 startKey = i * batchSize
                 endKey = startKey + batchSize
 
-                print("processing batch of _assay_keys %s to %s" % (startKey, endKey))
+                #print("processing batch of _assay_keys %s to %s" % (startKey, endKey))
 
                 # get insitu results
                 dbResults = _fetchInsituResults(startKey=startKey, endKey=endKey)
+                #print('createFullBCPFile \n %s' % dbResults)
                 resultGroups = mergeInsituResults(dbResults)
                 assayResultMap = groupResultsBy(dbResults, ['_assay_key'])
 
@@ -532,7 +543,6 @@ def createFullBCPFile():
                 # use groups of DB results to compute cache columns
                 # and create the actual cache records
                 results = generateCacheResults(1, resultGroups, assayResultMap)
-
                 # write/append found results to BCP file
                 _writeToBCPFile(results, startingKey=startingCacheKey)
 
