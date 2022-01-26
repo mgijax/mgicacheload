@@ -1,7 +1,9 @@
+TAG: mgicacheload-6-0-18-2
 TAG: mgicacheload-6-0-18-1
-DATE: 01/10/2022
+DATE: 01/10/2022, 01/26/2022
 STAFF: YAKS merge to trunk 
 gxdexpression add cell type
+if agemin/agemax = null, set to -1
 
 TAG: mgicacheload-6-0-16-8
 TAG: mgicacheload-6-0-16-7
