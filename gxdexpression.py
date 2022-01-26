@@ -418,6 +418,13 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                     else:
                         _gellane_key = 'null'
 
+                agemin = rep['agemin']
+                agemax = rep['agemin']
+                if agemin == None:
+                        agemin = '-1'
+                if agemax == None:
+                        agemax = '-1'
+
                 results.append([
                         rep['_assay_key'],
                         rep['_refs_key'],
@@ -433,8 +440,8 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                         expressed,
                         allstrength,
                         rep['age'],
-                        rep['agemin'],
-                        rep['agemax'],
+                        agemin,
+                        agemax,
                         isrecombinase,
                         isforgxd,
                         hasimage
