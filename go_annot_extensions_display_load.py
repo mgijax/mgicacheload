@@ -31,7 +31,6 @@ COLDL = '\t'
 LINEDL = '\n'
 
 NOTE_BCP_FILE = OUT_DIR + "/MGI_Note.bcp"
-NOTECHUNK_BCP_FILE = OUT_DIR + "/MGI_NoteChunk.bcp"
 
 # note type for annotation extension display/link
 DISPLAY_NOTE_TYPE_KEY = 1045
@@ -109,14 +108,6 @@ def readCommandLine():
 
 ### Query functions ###
 
-def _queryMaxNoteKey():
-    """
-    return latest usable MGI_Note._note_key
-    """
-    return db.sql('''select max(_note_key) as maxkey from mgi_note''', 
-        'auto')[0]['maxkey'] or 1
-        
-
 def _queryAnnotExtensions(evidenceKey=None,
                          limit=None,
                          offset=None):
@@ -148,13 +139,17 @@ def _queryAnnotExtensions(evidenceKey=None,
             
     query = '''
         select vep.*
-        from voc_evidence ve
-        join voc_evidence_property vep on
-            vep._annotevidence_key = ve._annotevidence_key
-        where ve._evidenceterm_key in (%s)
+        from voc_annot va, voc_evidence ve, voc_evidence_property vep
+        where va._annottype_key = 1000
+            and va._object_key = 105
+            and va._annot_key = ve._annot_key
+            and ve._evidenceterm_key in (%s)
+            and ve._refs_key = 74370
+            and ve._annotevidence_key = vep._annotevidence_key
             and vep._propertyterm_key in (%s)
             and vep.value != ''
         %s
+        order by vep.value
         %s
     ''' % (evidenceTermKeyClause, \
         propertyTermKeyClause, \
@@ -162,6 +157,7 @@ def _queryAnnotExtensions(evidenceKey=None,
         limitClause \
     )
     
+    print(query)
     results = db.sql(query, "auto")
     
     for r in results:
@@ -422,12 +418,10 @@ def makeNoteTag(url, display, type='Link'):
 
 def _writeToBCPFile(properties, 
                     noteFile,
-                    chunkFile,
                     startingKey):
     """
     Write the properties to the output files 
         noteFile for MGI_Note
-        chunkFile for MGI_NoteChunk
         
         increment _note_key using startingKey
     """
@@ -440,25 +434,15 @@ def _writeToBCPFile(properties,
                 property['_evidenceproperty_key'],
                 PROPERTY_MGITYPE_KEY,
                 DISPLAY_NOTE_TYPE_KEY,
+                property['displayNote'],
                 CREATEDBY_KEY,
                 CREATEDBY_KEY,
                 CDATE,
                 CDATE
                 ]
         noteFile.write('%s%s' % (COLDL.join([str(c) for c in note]), LINEDL) )
+        print(note)
         
-        
-        # write MGI_NoteChunk
-        notechunk = [key,
-                     1,
-                     property['displayNote'],
-                     CREATEDBY_KEY,
-                     CREATEDBY_KEY,
-                     CDATE,
-                     CDATE
-        ]
-        chunkFile.write('%s%s' % (COLDL.join([str(c) for c in notechunk]), LINEDL) )
-
         key += 1
 
     
@@ -491,16 +475,13 @@ def updateAll():
     """
     
     # drop existing notes
-    cmd = '''
-    delete from mgi_note
-    where _notetype_key = %d
-    ''' % DISPLAY_NOTE_TYPE_KEY
+    cmd = ''' delete from mgi_note where _notetype_key = %d ''' % DISPLAY_NOTE_TYPE_KEY
     db.sql(cmd, None)
-    
+    print(cmd)
     
     # get _note_key to use for inserts
-    startingNoteKey = _queryMaxNoteKey() + 1
-    
+    results = db.sql(''' select nextval('mgi_note_seq') as maxKey ''', 'auto')
+    startingNoteKey = results[0]['maxKey']
     
     # begin batch processing
     batchSize = 10000
@@ -509,7 +490,6 @@ def updateAll():
     providerLinkMap = _queryProviderLinkMap()
     
     noteFile = open(NOTE_BCP_FILE, 'w')
-    chunkFile = open(NOTECHUNK_BCP_FILE, 'w')
     
     try:
         while properties:
@@ -521,15 +501,12 @@ def updateAll():
             
             markerIDMap = _queryMarkerIDMap()
             
-            
             # transform the properties to their display/links
             properties = transformProperties(properties, termIDMap, markerIDMap, providerLinkMap)
             
-            
             # write BCP files
-            _writeToBCPFile(properties, noteFile, chunkFile, startingNoteKey)
-            
-            
+            _writeToBCPFile(properties, noteFile, startingNoteKey)
+
             # fetch new batch of properties
             startingNoteKey += batchSize
             offset += batchSize
@@ -537,13 +514,12 @@ def updateAll():
     
     finally:
         noteFile.close()
-        chunkFile.close()
     
     
     # insert the new data    
     db.bcp(NOTE_BCP_FILE, 'MGI_Note')
-    db.bcp(NOTECHUNK_BCP_FILE, 'MGI_NoteChunk')
-
+    db.sql(''' select setval('mgi_note_seq', (select max(_Note_key) from MGI_Note)) ''', None)
+    db.commit()
 
 
 if __name__ == "__main__":
