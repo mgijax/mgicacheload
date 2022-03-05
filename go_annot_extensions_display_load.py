@@ -137,14 +137,14 @@ def _queryAnnotExtensions(evidenceKey=None,
     if limit:
         limitClause = "limit %s offset %s" % (limit, offset)
             
+    #        and va._object_key = 105
+    #        and ve._refs_key = 74370
     query = '''
         select vep.*
         from voc_annot va, voc_evidence ve, voc_evidence_property vep
         where va._annottype_key = 1000
-            and va._object_key = 105
             and va._annot_key = ve._annot_key
             and ve._evidenceterm_key in (%s)
-            and ve._refs_key = 74370
             and ve._annotevidence_key = vep._annotevidence_key
             and vep._propertyterm_key in (%s)
             and vep.value != ''
