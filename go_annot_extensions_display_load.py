@@ -157,7 +157,6 @@ def _queryAnnotExtensions(evidenceKey=None,
         limitClause \
     )
     
-    print(query)
     results = db.sql(query, "auto")
     
     for r in results:
@@ -441,7 +440,6 @@ def _writeToBCPFile(properties,
                 CDATE
                 ]
         noteFile.write('%s%s' % (COLDL.join([str(c) for c in note]), LINEDL) )
-        print(note)
         
         key += 1
 
@@ -477,7 +475,6 @@ def updateAll():
     # drop existing notes
     cmd = ''' delete from mgi_note where _notetype_key = %d ''' % DISPLAY_NOTE_TYPE_KEY
     db.sql(cmd, None)
-    print(cmd)
     
     # get _note_key to use for inserts
     results = db.sql(''' select nextval('mgi_note_seq') as maxKey ''', 'auto')
