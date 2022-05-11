@@ -419,7 +419,7 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                         _gellane_key = 'null'
 
                 agemin = rep['agemin']
-                agemax = rep['agemin']
+                agemax = rep['agemax']
                 if agemin == None:
                         agemin = '-1'
                 if agemax == None:
