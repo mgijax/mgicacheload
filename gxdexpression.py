@@ -14,6 +14,9 @@
 #
 # History
 #
+# 07/8/2022     lec
+#       - wts2-935/GXD_Expression cache load: bug in calculating isrecombinase (has_driver)
+#
 # 09/21/2021    sc
 #       - YAKS project, expression cell type annotation
 #         add cell type to cache
@@ -46,8 +49,6 @@ except:
 COLDL = '|'
 LINEDL = '\n'
 TABLE = 'GXD_Expression'
-
-DRIVER_NOTE_TYPE_KEY = 1034
 
 # current date
 CDATE = mgi_utils.date("%m/%d/%Y")
@@ -221,10 +222,10 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
                 i._image_key,
                 i.xDim as image_xdim,
                 reporter.term reportergene,
-                exists (select 1 from mgi_note mn
+                exists (select 1 from mgi_relationship mr
                         join gxd_allelegenotype gag
-                                on gag._allele_key = mn._object_key
-                                and mn._notetype_key = %(drivernote_type_key)d
+                        on gag._allele_key = mr._object_key_1
+                        and mr._category_key = 1006
                         where gag._genotype_key = s._genotype_key) has_driver
         from gxd_assay a 
                 join
@@ -255,7 +256,7 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
                 gxd_isresultcelltype ct on
                          ct._result_key = ir._result_key
         %(where)s
-        ''' % {'where':where, 'drivernote_type_key': DRIVER_NOTE_TYPE_KEY}
+        ''' % {'where':where}
 
         results = db.sql(insituSql, 'auto')
 
