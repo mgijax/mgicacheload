@@ -210,7 +210,7 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
                 irs._emapa_term_key,
                 ct._celltype_term_key,
                 irs._stage_key,
-                strength.strength,
+                strength.term as strength,
                 s.age,
                 s.agemin,
                 s.agemax,
@@ -235,8 +235,8 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
                 gxd_insituresult ir on
                         ir._specimen_key = s._specimen_key
                 join
-                gxd_strength strength on
-                        strength._strength_key = ir._strength_key
+                voc_term strength on
+                        strength._term_key = ir._strength_key
                 join
                 gxd_isresultstructure irs on
                         irs._result_key = ir._result_key
@@ -288,7 +288,7 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
                 gls._emapa_term_key,
                 null as _celltype_term_key,
                 gls._stage_key,
-                strength.strength,
+                strength.term as strength,
                 gl.age,
                 gl.agemin,
                 gl.agemax,
@@ -303,7 +303,7 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
                 join
                 gxd_gellane gl on (
                         gl._assay_key = a._assay_key
-                        and gl._gelcontrol_key = 1
+                        and exists (select 1 from voc_term t where gl._gelcontrol_key = t._term_key and t.term = 'No')
                 ) join
                 gxd_gellanestructure gls on
                         gls._gellane_key = gl._gellane_key
@@ -311,8 +311,8 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
                 gxd_gelband gb on
                         gb._gellane_key = gl._gellane_key
                 join
-                gxd_strength strength on
-                        strength._strength_key = gb._strength_key
+                voc_term  strength on
+                        strength._term_key = gb._strength_key
                 left outer join
                 img_imagepane ip on
                         ip._imagepane_key = a._imagepane_key
