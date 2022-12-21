@@ -2,6 +2,11 @@
 Load the cache of notes
     representing the display values for 
     GO annotation extensions (VOC_Evidence_Property).
+
+12/21/2022      lec
+        wts2-993/In some cases, identifiers are not resolving to linkable text in GO annotations. See the annotations for Slc30a3.
+        changed:  batchSize from 1000 to 250000
+        added:  testCounts() to test Slc30a3
 """
 
 from optparse import OptionParser
@@ -30,7 +35,7 @@ except:
 COLDL = '\t'
 LINEDL = '\n'
 
-NOTE_BCP_FILE = OUT_DIR + "/MGI_Note.bcp"
+NOTE_BCP_FILE = OUT_DIR + "/MGI_Note.go_annot_extensions.bcp"
 
 # note type for annotation extension display/link
 DISPLAY_NOTE_TYPE_KEY = 1045
@@ -149,7 +154,7 @@ def _queryAnnotExtensions(evidenceKey=None,
             and vep._propertyterm_key in (%s)
             and vep.value != ''
         %s
-        order by vep.value
+        order by ve._annotevidence_key, vep.value
         %s
     ''' % (evidenceTermKeyClause, \
         propertyTermKeyClause, \
@@ -157,6 +162,7 @@ def _queryAnnotExtensions(evidenceKey=None,
         limitClause \
     )
     
+    #print(query)
     results = db.sql(query, "auto")
     
     for r in results:
@@ -180,12 +186,12 @@ def _createTempIDTable(properties):
     ''' % TEMP_ID_TABLE
     db.sql(dropTempTable, None)
     
-    
     createTempTable = '''
         create temp table %s (
            id text NOT NULL
         )
     ''' % TEMP_ID_TABLE
+    #print(createTempTable)
     db.sql(createTempTable, None)
     
     # write a BCP file to insert into temp table
@@ -231,6 +237,7 @@ def _queryTermIDMap():
         term._term_key = acc._object_key
     order by preferred
     ''' % (TEMP_ID_TABLE, VOCAB_TERM_MGITYPE_KEY)
+    #print(query)
     results = db.sql(query, 'auto')
     
     for result in results:
@@ -259,6 +266,7 @@ def _queryMarkerIDMap():
         mrk._marker_key = acc._object_key
     order by preferred
     ''' % (TEMP_ID_TABLE, MARKER_MGITYPE_KEY)
+    #print(query)
     results = db.sql(query, 'auto')
     
     for result in results:
@@ -285,6 +293,7 @@ def _queryProviderLinkMap():
         adb._logicaldb_key = ldb._logicaldb_key
     where (ldb.name, adb.name) in (%s)
     ''' % ( logicalActualDbClause)
+    #print(query)
     results = db.sql(query, 'auto')
     
     for result in results:
@@ -481,7 +490,7 @@ def updateAll():
     startingNoteKey = results[0]['maxKey']
     
     # begin batch processing
-    batchSize = 10000
+    batchSize = 250000
     offset = 0
     properties = _queryAnnotExtensions(limit=batchSize, offset=offset)
     providerLinkMap = _queryProviderLinkMap()
@@ -518,7 +527,37 @@ def updateAll():
     db.sql(''' select setval('mgi_note_seq', (select max(_Note_key) from MGI_Note)) ''', None)
     db.commit()
 
+def testCounts():
+    # run this if you want to test the counts for Slc30a3 (42422)
 
+    noteSQL = '''
+    select n.*
+    from mgi_note n, voc_evidence e, voc_evidence_property p, voc_annot a 
+    where a._annottype_key = 1000
+    and a._object_key = 42422
+    and a._annot_key = e._annot_key
+    and e._annotevidence_key = p._annotevidence_key
+    and p._evidenceproperty_key = n._object_key
+    and n._notetype_key = 1045
+    order by n.note
+    '''
+    results = db.sql(noteSQL, 'auto')
+    print('count of notes for Slc30a3: ', str(len(results)))
+
+    annotSQL = '''
+    select t.term, p.value
+    from voc_evidence e, voc_evidence_property p, voc_annot a, voc_term t
+    where a._annottype_key = 1000
+    and a._object_key = 42422
+    and a._annot_key = e._annot_key
+    and e._annotevidence_key = p._annotevidence_key
+    and p._propertyterm_key = t._Term_key
+    and p._propertyterm_key in (10995953,10995919,10995920,10995922,10995925,10995928,10995931,10995932,10995933,10995934,10995935,10995936,10995937,10995938,10995940,10995941,10995945,10995946,10995947,10995949,10995950,10995951,10995952,10995960,10995963,10995964,10995965,10995966,10995967,10995968,10995969,10995970,10995971,10995972,10995973,10995974,10995975,10995976,10995977,10995978,10995979,10995980,10995981,10995982,10995983,10995984,10995985,10995986,10995987,10995988,10995989,10995990,10995991,10995992,10995993,13946898,15336083,15336084,16071180,17863564,19366754,19366755,19788375,19788376,21040292,26967043,27897499,29174556,29174557,30059450,32167776,35216336,40435559,40435560,40435561,40435562,40435563,40975434,52719963,67491796,67993660,68424959,69147444,91431505,91431507,91431508,91431509,100803635,100803636,10995929,10995921,10995923,10995924,10995959,12559890,13040278,19366756,40435555,40435556,40435557,40435558,40975433,40975435,40975436,40975437,10995926,10995927,10995930,10995942,10995943,10995944,10995954,10995955,10995956,10995957,10995958,10995961,10995962,83442724,91431506,91794702)
+    order by p.value
+    '''
+    results = db.sql(annotSQL, 'auto')
+    print('count of annotation for Slc30a3: ', str(len(results)))
+    
 if __name__ == "__main__":
     
     # process using command line input
@@ -528,7 +567,8 @@ if __name__ == "__main__":
     db.sql('start transaction', None)
     
     process(evidenceKey=options.evidenceKey)
-    
     db.commit()
-    
+
+    #testCounts()
+    #db.commit()
     
