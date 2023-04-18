@@ -7,10 +7,11 @@ Load the cache of notes
 from optparse import OptionParser
 import os
 import re
-
 import db
 import mgi_utils
 import go_isoforms
+
+db.setTrace()
 
 USAGE="""
 usage: %prog [-S -D -U -P -K]
@@ -26,7 +27,7 @@ except:
 COLDL = '\t'
 LINEDL = '\n'
 
-NOTE_BCP_FILE = OUT_DIR + "/MGI_Note.bcp"
+NOTE_BCP_FILE = OUT_DIR + "/MGI_Note.go_isoforms.bcp"
 
 # note type for GO isoform display/link
 DISPLAY_NOTE_TYPE_KEY = 1046
@@ -42,7 +43,6 @@ CDATE = mgi_utils.date("%m/%d/%Y")
 # use mgd_dbo
 CREATEDBY_KEY = 1001
 
-
 # External database links
 # (Logical DB name, Actual DB name)
 DATABASE_PROVIDERS = [
@@ -55,7 +55,6 @@ DATABASE_PROVIDERS = [
     # UniProtKB: IDs
     ('SWISS-PROT', 'UniProt')
 ]
-
 
 def readCommandLine():
     """
@@ -96,9 +95,7 @@ def readCommandLine():
         # using default database options
         pass
     
-    
     return options
-
 
 ### Query functions ###
 
@@ -150,9 +147,6 @@ def _queryAnnotExtensions(evidenceKey=None,
     
     return results
 
-
-
-
 def _queryProviderLinkMap():
     """
     Query and build an {acc_actualdb.name : url} map for
@@ -178,8 +172,6 @@ def _queryProviderLinkMap():
     
     return providerLinkMap
    
-    
-    
 ### Business Logic Functions ###
 def transformProperties(properties,
                         providerLinkMap={}):
@@ -243,23 +235,17 @@ def transformProperties(properties,
                 url = providerLinkMap['UniProt'].replace('@@@@', linkValue)
                 value = makeNoteTag(url, value)
                 
-    
-            
             values.append(value)
         
-        
         if values:
-        
             value = ", ".join(values)
             
             transformed.append({
              'displayNote': value,
              '_evidenceproperty_key': property['_evidenceproperty_key']   
             })
-    
 
     return transformed    
-
 
 def makeNoteTag(url, display, type='Link'):
     """
@@ -267,7 +253,6 @@ def makeNoteTag(url, display, type='Link'):
     """ 
     return '\\\\%s(%s|%s|)' % (type, url, display)
 
-    
 ### Functions to perform the updates ###    
 
 def _writeToBCPFile(properties, 
@@ -282,7 +267,6 @@ def _writeToBCPFile(properties,
 
     key = startingKey
     for property in properties:
-        
         # write MGI_Note
         note = [key,
                 property['_evidenceproperty_key'],
@@ -295,10 +279,8 @@ def _writeToBCPFile(properties,
                 CDATE
                 ]
         noteFile.write('%s%s' % (COLDL.join([str(c) for c in note]), LINEDL) )
-
         key += 1
 
-    
 def process(evidenceKey=None):
     """
     Process the cache load
@@ -312,7 +294,6 @@ def process(evidenceKey=None):
     else:
         updateAll()
         
-    
 def updateSingleEvidence():
     """
     Update single evidence record's annotation extensions
@@ -321,7 +302,6 @@ def updateSingleEvidence():
     # Only if the EI needs this in the future will we add it
     raise Exception("Not Implemented")
     
-
 def updateAll():
     """
     Update all the annotation extension display notes
@@ -333,7 +313,6 @@ def updateAll():
     where _notetype_key = %d
     ''' % DISPLAY_NOTE_TYPE_KEY
     db.sql(cmd, None)
-    
     
     # get _note_key to use for inserts
     results = db.sql(''' select nextval('mgi_note_seq') as maxKey ''', 'auto')
@@ -365,13 +344,10 @@ def updateAll():
     finally:
         noteFile.close()
     
-    
     # insert the new data    
     db.bcp(NOTE_BCP_FILE, 'MGI_Note')
     db.sql(''' select setval('mgi_note_seq', (select max(_Note_key) from MGI_Note)) ''', None)
     db.commit()
-
-
 
 if __name__ == "__main__":
     
@@ -384,5 +360,4 @@ if __name__ == "__main__":
     process(evidenceKey=options.evidenceKey)
     
     db.commit()
-    
     

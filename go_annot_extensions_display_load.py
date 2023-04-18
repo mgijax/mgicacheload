@@ -13,13 +13,11 @@ from optparse import OptionParser
 import os
 import tempfile
 import re
-
 import db
 import mgi_utils
 import go_annot_extensions
 
-# to help when debugging
-#db.setTrace()
+db.setTrace()
 
 USAGE="""
 usage: %prog [-S -D -U -P -K]
@@ -67,12 +65,12 @@ DATABASE_PROVIDERS = [
     ('SWISS-PROT', 'UniProt')
 ]
 
-
 def readCommandLine():
     """
     Read command line input
     returns options
     """
+
     parser = OptionParser(usage=USAGE)
     
     parser.add_option("-S", dest="dbServer")
@@ -107,9 +105,7 @@ def readCommandLine():
         # using default database options
         pass
     
-    
     return options
-
 
 ### Query functions ###
 
@@ -122,15 +118,13 @@ def _queryAnnotExtensions(evidenceKey=None,
         (optionally uses limit + offset for batch processing)
     """
     
-    # get the correct _propertyterm_keys and _evidenceterm_keys 
-    #    for annotation extensions
+    # get the correct _propertyterm_keys and _evidenceterm_keys for annotation extensions
     extensionProcessor = go_annot_extensions.Processor()
     propertyTermKeys = extensionProcessor.querySanctionedPropertyTermKeys()
     evidenceTermKeys = extensionProcessor.querySanctionedEvidenceTermKeys()
     
     propertyTermKeyClause = ",".join([str(k) for k in propertyTermKeys])
     evidenceTermKeyClause = ",".join([str(k) for k in evidenceTermKeys])
-    
     
     # optional evidenceKey clause
     evidenceKeyClause = ""
@@ -170,7 +164,6 @@ def _queryAnnotExtensions(evidenceKey=None,
     
     return results
 
-
 def _createTempIDTable(properties):
     """
     Create a temp table TEMP_ID_TABLE with the current properties
@@ -197,26 +190,20 @@ def _createTempIDTable(properties):
     # write a BCP file to insert into temp table
     temp = tempfile.NamedTemporaryFile(mode="w")
     try:
-    
         for property in properties:
             id = property['value']
             temp.write("%s\n" % (id) )
-            
         temp.seek(0)
-    
         db.bcp(temp.name, TEMP_ID_TABLE, schema=None)
         
     finally:
         temp.close()
             
-    
     indexTempTable = '''
         create index %s_id_idx on %s (id)
     ''' % (TEMP_ID_TABLE, TEMP_ID_TABLE)
     db.sql(indexTempTable, None)
     
-
-
 def _queryTermIDMap():
     """
     Query and build a {termID : term} map based on
@@ -244,7 +231,6 @@ def _queryTermIDMap():
         termIDMap[result['id']] = result['term']
     
     return termIDMap
-    
     
 def _queryMarkerIDMap():
     """
@@ -274,7 +260,6 @@ def _queryMarkerIDMap():
         
     return markerIDMap
    
-   
 def _queryProviderLinkMap():
     """
     Query and build an {acc_actualdb.name : url} map for
@@ -300,7 +285,6 @@ def _queryProviderLinkMap():
         providerLinkMap[result['name']] = result['url']
     
     return providerLinkMap
-    
     
 ### Business Logic Functions ###
 def transformProperties(properties,
@@ -328,37 +312,28 @@ def transformProperties(properties,
     UNIPROTKB_regex = re.compile(r'^UniprotKB:', re.I)
     
     for property in properties:
-        
         value = property['value']
-
 
         ### IDs that we link and map to voc terms ###
         
         if GO_regex.match(value):
-            
             id = value
             if id in termIDMap:
                 term = termIDMap[id]
-            
                 # link GO ID to GO term detail
                 value = makeNoteTag(id, term, 'GO')
                 
         elif EMAPA_regex.match(value):
-            
             id = value
             if id in termIDMap:
                 term = termIDMap[id]
-            
                 # link EMAPA ID to EMAPA term detail
                 value = makeNoteTag(id, term, 'EMAPA')
                 
-        elif CL_regex.match(value) and \
-            'Cell Ontology' in providerLinkMap:
-            
+        elif CL_regex.match(value) and 'Cell Ontology' in providerLinkMap:
             id = value
             if id in termIDMap:
                 term = termIDMap[id]
-            
                 # link form of ID has an underscore
                 linkValue = id.replace(':','_')
                 url = providerLinkMap['Cell Ontology'].replace('@@@@', linkValue)
@@ -367,36 +342,28 @@ def transformProperties(properties,
         ### IDs that we link and map to marker symbols ###
                 
         elif MGI_regex.match(value):
-            
             # all MGI IDs should be a mouse marker
             id = value
             if id in markerIDMap:
                 symbol = markerIDMap[id]
-            
                 # link via Marker detail
                 value = makeNoteTag(id, symbol, 'Marker')
                 
         ### IDs that we link, but do not map ###       
         
-        elif ENSEMBL_regex.match(value) and \
-                'Ensembl Gene Model' in providerLinkMap:
-            
+        elif ENSEMBL_regex.match(value) and 'Ensembl Gene Model' in providerLinkMap:
             # remove prefix for linking
             linkValue = value[ (value.find(':') + 1) : ]
             url = providerLinkMap['Ensembl Gene Model'].replace('@@@@', linkValue)
             value = makeNoteTag(url, value)
         
-        elif PRO_regex.match(value) and \
-                'Protein Ontology' in providerLinkMap:
-            
+        elif PRO_regex.match(value) and 'Protein Ontology' in providerLinkMap:
              # keep the PR: prefix
             linkValue = value
             url = providerLinkMap['Protein Ontology'].replace('@@@@', linkValue)
             value = makeNoteTag(url, value)
         
-        elif UNIPROTKB_regex.match(value) and \
-                'UniProt' in providerLinkMap:
-                
+        elif UNIPROTKB_regex.match(value) and 'UniProt' in providerLinkMap:
             # remove prefix for linking
             linkValue = value[ (value.find(':') + 1) : ]
             url = providerLinkMap['UniProt'].replace('@@@@', linkValue)
@@ -411,9 +378,7 @@ def transformProperties(properties,
          '_evidenceproperty_key': property['_evidenceproperty_key']   
         })
     
-
     return transformed    
-
 
 def makeNoteTag(url, display, type='Link'):
     """
@@ -430,13 +395,11 @@ def _writeToBCPFile(properties,
     """
     Write the properties to the output files 
         noteFile for MGI_Note
-        
         increment _note_key using startingKey
     """
 
     key = startingKey
     for property in properties:
-        
         # write MGI_Note
         note = [key,
                 property['_evidenceproperty_key'],
@@ -449,10 +412,8 @@ def _writeToBCPFile(properties,
                 CDATE
                 ]
         noteFile.write('%s%s' % (COLDL.join([str(c) for c in note]), LINEDL) )
-        
         key += 1
 
-    
 def process(evidenceKey=None):
     """
     Process the cache load
@@ -466,7 +427,6 @@ def process(evidenceKey=None):
     else:
         updateAll()
         
-    
 def updateSingleEvidence():
     """
     Update single evidence record's annotation extensions
@@ -475,7 +435,6 @@ def updateSingleEvidence():
     # Only if the EI needs this in the future will we add it
     raise Exception("Not Implemented")
     
-
 def updateAll():
     """
     Update all the annotation extension display notes
@@ -499,12 +458,9 @@ def updateAll():
     
     try:
         while properties:
-            
             # setup the lookups for IDs to display values
             _createTempIDTable(properties)
-            
             termIDMap = _queryTermIDMap()
-            
             markerIDMap = _queryMarkerIDMap()
             
             # transform the properties to their display/links
@@ -520,7 +476,6 @@ def updateAll():
     
     finally:
         noteFile.close()
-    
     
     # insert the new data    
     db.bcp(NOTE_BCP_FILE, 'MGI_Note')
