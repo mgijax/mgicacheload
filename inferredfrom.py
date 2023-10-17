@@ -103,7 +103,6 @@ providerMap = {
         'panther' : 147,
         'complexportal' : 211,
         'pombase' : 115,
-        'pfam' : 119,
         'chebi' : 127,
         'ncbi_gene' : 160,
         'rnacentral' : 204,
