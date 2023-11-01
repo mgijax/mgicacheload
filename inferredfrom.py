@@ -62,7 +62,6 @@ db.setTrace()
 user = os.environ['MGD_DBUSER']
 passwordFileName = os.environ['MGD_DBPASSWORDFILE']
 outputDir = os.environ['MGICACHEBCPDIR']
-BCP_COMMAND = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
 
 accTable = 'ACC_Accession'
 accFile = ''            # file descriptor
@@ -412,14 +411,7 @@ def processCache():
                 # the EI will pick up the standard output via the ei/dsrc/PythonLib.d/PythonInferredFromCache code
                 print('\nThe following errors exist in the inferred-from text:\n\n' + eiErrors)
 
-        #
-        # bcp files
-        #
         accFile.close()
-        bcpCmd = '%s %s %s %s "/" %s "|" "\\n" mgd' % (BCP_COMMAND, db.get_sqlServer(), db.get_sqlDatabase(), accTable, accFileName)
-        db.commit()
-        print(bcpCmd)
-        os.system(bcpCmd)
 
 #
 #

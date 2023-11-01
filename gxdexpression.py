@@ -34,7 +34,7 @@ import mgi_utils
 import db
 
 #
-# when the EI calls this script, it is *not* sourcing ./Configuration
+# when the PWI calls this script, it is *not* sourcing ./Configuration
 #
 
 try:
@@ -108,11 +108,9 @@ def showUsage():
         sys.stderr.write(usage)
         sys.exit(1)
 
-
 def parseCommandArgs():
         """
-        Reads in command line args,
-                prints usage if necessary
+        Reads in command line args, prints usage if necessary
         if successful, inits db and returns assayKey
         """
 
@@ -152,7 +150,6 @@ def parseCommandArgs():
 
         return assayKey
 
- 
 def process(assayKey):
         """
         processes cache based on assayKey argument
@@ -175,15 +172,13 @@ def _fetchMaxExpressionKey():
         """
         Return the current max _expression_key in cache
         """
-        return db.sql('''select max(_expression_key) as maxkey from %s''' % TABLE, 
-                'auto')[0]['maxkey'] or 1
+        return db.sql('''select max(_expression_key) as maxkey from %s''' % TABLE, 'auto')[0]['maxkey'] or 1
 
 def _fetchMaxAssayKey():
         """
         Return the current max _assay_key in gxd_assay
         """
-        return db.sql('''select max(_assay_key) as maxkey from gxd_assay''', 
-                'auto')[0]['maxkey'] or 1
+        return db.sql('''select max(_assay_key) as maxkey from gxd_assay''', 'auto')[0]['maxkey'] or 1
 
 def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
         """
@@ -194,8 +189,7 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
         # first fetch insitu data from DB
         where = ''
         if startKey != None and endKey != None:
-                where = 'where a._assay_key >= %s and a._assay_key < %s' % \
-                        (startKey, endKey)
+                where = 'where a._assay_key >= %s and a._assay_key < %s' % (startKey, endKey)
 
         elif assayKey:
                 where = 'where a._assay_key = %d' % assayKey
@@ -265,15 +259,13 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
 
 def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
         """
-        Load Gel (Blot) results from DB
-        returns results
+        Load Gel (Blot) results from DB returns results
         """
         
         # first fetch gel data from DB
         where = ''
         if startKey != None and endKey != None:
-                where =  'where a._assay_key >= %s and a._assay_key < %s' % \
-                        (startKey, endKey)
+                where =  'where a._assay_key >= %s and a._assay_key < %s' % (startKey, endKey)
 
         elif assayKey:
                 where = 'where a._assay_key = %d' % assayKey
@@ -325,7 +317,6 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
         %s      
         ''' % (where)
 
-
         results = db.sql(gelSql, 'auto')
         #print("got %d results" % len(results))
 
@@ -333,11 +324,12 @@ def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
 
 def groupResultsBy(dbResults, columns):
         """
-        groups the database results
-        by specified list of columns
+        groups the database results by specified list of columns
         returns dictionary of columns to results
         """
+
         resultMap = {}
+
         # group database results by cache uniqueness
         for dbResult in dbResults:
                 if len(columns) == 1:
@@ -348,20 +340,16 @@ def groupResultsBy(dbResults, columns):
 
         return resultMap
 
-
 def mergeInsituResults(dbResults):
         """
-        groups the results from database
-        by uniqueness of cache fields,
+        groups the results from database by uniqueness of cache fields,
         returns list result groups
         """
-
         return list(groupResultsBy(dbResults, ['_specimen_key','_emapa_term_key', '_stage_key', '_celltype_term_key']).values())
 
 def mergeGelResults(dbResults):
         """
-        groups the results from database
-        by uniqueness of cache fields,
+        groups the results from database by uniqueness of cache fields,
         returns list result groups
         """
         return list(groupResultsBy(dbResults, ['_gellane_key','_emapa_term_key', '_stage_key', '_celltype_term_key']).values())
@@ -454,7 +442,6 @@ def computeExpressedFlag(dbResults):
         """
         compute an expressed flag
         based on a group of database results    
-        @unittested
         """
 
         expressed = 0
@@ -472,10 +459,9 @@ def computeIsForGxd(dbResults):
         """
         compute an isforgxd flag
         based on a group of database results    
-        @unittested
         """
-        if dbResults  \
-            and dbResults[0]['_assaytype_key'] not in [10,11]:
+        
+        if dbResults and dbResults[0]['_assaytype_key'] not in [10,11]:
                 return 1
 
         return 0
@@ -484,14 +470,13 @@ def computeIsRecombinase(dbResults):
         """
         compute an isrecombinase flag
         based on a group of database results    
-        @unittested
         """
+
         if dbResults:
                 if dbResults[0]['_assaytype_key'] in [10,11]:
                         return 1
                 
-                if dbResults[0]['_assaytype_key'] == 9 \
-                    and dbResults[0]['has_driver']:
+                if dbResults[0]['_assaytype_key'] == 9 and dbResults[0]['has_driver']:
                         return 1
 
         return 0
@@ -500,12 +485,10 @@ def computeHasImage(dbResults):
         """
         compute a hasimage flag
         based on a group of database results    
-        @unittested
         """
+
         for r in dbResults:
-                if r['_imagepane_key'] \
-                    and r['_image_key'] \
-                    and r['image_xdim']:
+                if r['_imagepane_key'] and r['_image_key'] and r['image_xdim']:
                         return 1
         return 0
 
@@ -513,8 +496,7 @@ def computeHasImage(dbResults):
 
 def createFullBCPFile():
         """
-        Creates the BCP file
-        for a full reload of the cache
+        Creates the BCP file for a full reload of the cache
         ( This file is used by external process to load cache )
         """
 
@@ -541,7 +523,6 @@ def createFullBCPFile():
                 #print('createFullBCPFile \n %s' % dbResults)
                 resultGroups = mergeInsituResults(dbResults)
                 assayResultMap = groupResultsBy(dbResults, ['_assay_key'])
-
                 
                 # get gel results
                 dbResults = _fetchGelResults(startKey=startKey, endKey=endKey)
@@ -556,13 +537,12 @@ def createFullBCPFile():
 
                 startingCacheKey += len(results)
 
-
 def _writeToBCPFile(results, startingKey=1):
         """
         Write cache results to BCP file
         """
-        fp = open(BCP_FILENAME, 'a')
 
+        fp = open(BCP_FILENAME, 'a')
         key = startingKey
         for result in results:
                 # add expression key
@@ -573,9 +553,7 @@ def _writeToBCPFile(results, startingKey=1):
                 result.append(CDATE)
 
                 fp.write('%s%s' % (COLDL.join([_sanitizeBCP(c) for c in result]), LINEDL) )
-
                 key += 1
-
 
         fp.close()
 
@@ -584,7 +562,6 @@ def _sanitizeBCP(col):
                 return ''
         return str(col)
                 
-
 ### Single Assay Processing Methods ###
 
 def updateSingleAssay(assayKey):
@@ -636,7 +613,6 @@ def _fetchIsAssayGel(assayKey):
             isgel = results[0]['isgelassay']
 
         return isgel
-        
 
 def _updateExpressionCache(assayKey, results):
         """
@@ -663,7 +639,6 @@ def _updateExpressionCache(assayKey, results):
                 db.sql(insertSql, None)
 
         db.commit()
-
         db.sql('commit transaction', None)
 
 def _sanitizeInsert(col):
@@ -671,14 +646,9 @@ def _sanitizeInsert(col):
                 return 'NULL'
         return col
 
-
-
 if __name__ == '__main__':
 
     print('%s' % mgi_utils.date())
-
     assayKey = parseCommandArgs()
-
     process(assayKey)
-
     print('%s' % mgi_utils.date())

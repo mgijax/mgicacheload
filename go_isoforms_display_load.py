@@ -1,7 +1,10 @@
 """
-Load the cache of notes
-    representing the display values for 
-    GO isoforms (VOC_Evidence_Property).
+Load the cache of notes representing the display values for GO annotation isoform (VOC_Evidence_Property).
+
+10/23/2023      lec
+        wts2-1311/fl2-596/lib_py_postgres, etc.
+        simplify the sql; remove temp table; remove offset/limit
+
 """
 
 from optparse import OptionParser
@@ -29,13 +32,11 @@ LINEDL = '\n'
 
 NOTE_BCP_FILE = OUT_DIR + "/MGI_Note.go_isoforms.bcp"
 
-# note type for GO isoform display/link
+# note type for annotation extension display/link
 DISPLAY_NOTE_TYPE_KEY = 1046
+
 # MGI Type key for voc_evidence_property
 PROPERTY_MGITYPE_KEY = 41
-
-VOCAB_TERM_MGITYPE_KEY = 13
-MARKER_MGITYPE_KEY = 2
 
 # current date
 CDATE = mgi_utils.date("%m/%d/%Y")
@@ -46,21 +47,17 @@ CREATEDBY_KEY = 1001
 # External database links
 # (Logical DB name, Actual DB name)
 DATABASE_PROVIDERS = [
-    # EMBL: IDs
     ('Sequence DB', 'EMBL'),
-    # NCBI: and RefSeq: IDs
     ('RefSeq', 'RefSeq'),
-    # PR: IDs
     ('Protein Ontology', 'Protein Ontology'),
-    # UniProtKB: IDs
     ('SWISS-PROT', 'UniProt')
 ]
 
 def readCommandLine():
     """
-    Read command line input
-    returns options
+    Read command line input returns options
     """
+
     parser = OptionParser(usage=USAGE)
     
     parser.add_option("-S", dest="dbServer")
@@ -71,8 +68,7 @@ def readCommandLine():
 
     (options, args) = parser.parse_args()
 
-    if options.dbServer or options.dbName \
-        or options.dbUser or options.passwordFile:
+    if options.dbServer or options.dbName or options.dbUser or options.passwordFile:
         
         if not options.dbServer:
             parser.error('Need to specify -S dbServer')
@@ -99,60 +95,45 @@ def readCommandLine():
 
 ### Query functions ###
 
-def _queryAnnotExtensions(evidenceKey=None,
-                         limit=None,
-                         offset=None):
+def queryAnnotExtensions():
     """
     Query all the annotation extensions 
-        (optionally uses evidenceKey)
-        (optionally uses limit + offset for batch processing)
     """
     
-    # get the correct _propertyterm_keys 
-    #    for annotation isoforms
+    # get the correct _propertyterm_keys for annotation isoforms
     isoformProcessor = go_isoforms.Processor()
     propertyTermKeys = isoformProcessor.querySanctionedPropertyTermKeys()
-    
+
     propertyTermKeyClause = ",".join([str(k) for k in propertyTermKeys])
     
-    # optional evidenceKey clause
-    evidenceKeyClause = ""
-    if evidenceKey:
-        evidenceKeyClause = "and ve._annotevidence_key = %s" % evidenceKey
-        
-    # optional limit, offset
-    limitClause = ""
-    if limit:
-        limitClause = "limit %s offset %s" % (limit, offset)
-            
+    #
+    # search for all annotations where voc_evidence_property where 
+    #   voc_evidence_property._propertyterm_key matches propertyTermKeyClause
+    #
+
     query = '''
         select vep.*
-        from voc_evidence ve
-        join voc_evidence_property vep on
-            vep._annotevidence_key = ve._annotevidence_key
-        where vep._propertyterm_key in (%s)
-        %s
-        %s
-    ''' % ( propertyTermKeyClause, \
-        evidenceKeyClause,\
-        limitClause \
-    )
+        from voc_annot va, voc_evidence ve, voc_evidence_property vep
+        where va._annottype_key = 1000
+            and va._annot_key = ve._annot_key
+            and ve._annotevidence_key = vep._annotevidence_key
+            and vep._propertyterm_key in (%s)
+            and vep.value != ''
+        order by value
+    ''' % (propertyTermKeyClause)
     
     results = db.sql(query, "auto")
     
     for r in results:
-        
-        # set value to multiple values list
         r['value'] = isoformProcessor.processValue(r['value'])
     
     return results
 
-def _queryProviderLinkMap():
+def queryProviderLinkMap():
     """
-    Query and build an {acc_actualdb.name : url} map for
-        linking isoforms
-        
+    Query and build an {acc_actualdb.name : url} map for linking annotation extensions
     """
+
     providerLinkMap = {}
     
     # Query by both logical DB and actual DB to get the exact url we want to use
@@ -171,14 +152,11 @@ def _queryProviderLinkMap():
         providerLinkMap[result['name']] = result['url']
     
     return providerLinkMap
-   
+    
 ### Business Logic Functions ###
-def transformProperties(properties,
-                        providerLinkMap={}):
+def transformProperties(properties, providerLinkMap={}):
     """
     Transform the properties into their display values
-        using provided termIDMap {id:term},
-            and markerIDMap {id:symbol}
     
     returns [ {'displayNote', '_evidenceproperty_key'}, ]
     """
@@ -199,38 +177,28 @@ def transformProperties(properties,
         for value in property['value']:
            
             # special provider cases
-            if EMBL_regex.match(value) and \
-                'EMBL' in providerLinkMap:
-                
+            if EMBL_regex.match(value) and 'EMBL' in providerLinkMap:
                 linkValue = value[ (value.find(':') + 1) : ]
                 url = providerLinkMap['EMBL'].replace('@@@@', linkValue)
                 value = makeNoteTag(url, value)
                 
-            elif NCBI_regex.match(value) and \
-                'RefSeq' in providerLinkMap:
-                
+            elif NCBI_regex.match(value) and 'RefSeq' in providerLinkMap:
                 linkValue = value[ (value.find(':') + 1) : ]
                 url = providerLinkMap['RefSeq'].replace('@@@@', linkValue)
                 value = makeNoteTag(url, value)
                 
-            elif PRO_regex.match(value) and \
-                'Protein Ontology' in providerLinkMap:
-                
+            elif PRO_regex.match(value) and 'Protein Ontology' in providerLinkMap:
                 # keep the PR: prefix
                 linkValue = value
                 url = providerLinkMap['Protein Ontology'].replace('@@@@', linkValue)
                 value = makeNoteTag(url, value)
                 
-            elif REFSEQ_regex.match(value) and \
-                'RefSeq' in providerLinkMap:
-                
+            elif REFSEQ_regex.match(value) and 'RefSeq' in providerLinkMap:
                 linkValue = value[ (value.find(':') + 1) : ]
                 url = providerLinkMap['RefSeq'].replace('@@@@', linkValue)
                 value = makeNoteTag(url, value)
                 
-            elif UNIPROTKB_regex.match(value) and \
-                'UniProt' in providerLinkMap:
-                
+            elif UNIPROTKB_regex.match(value) and 'UniProt' in providerLinkMap:
                 linkValue = value[ (value.find(':') + 1) : ]
                 url = providerLinkMap['UniProt'].replace('@@@@', linkValue)
                 value = makeNoteTag(url, value)
@@ -255,14 +223,9 @@ def makeNoteTag(url, display, type='Link'):
 
 ### Functions to perform the updates ###    
 
-def _writeToBCPFile(properties, 
-                    noteFile,
-                    startingKey):
+def writeToBCPFile(properties, noteFile, startingKey):
     """
-    Write the properties to the output files 
-        noteFile for MGI_Note
-        
-        increment _note_key using startingKey
+    Write the properties to the output files noteFile for MGI_Note increment _note_key using startingKey
     """
 
     key = startingKey
@@ -281,83 +244,43 @@ def _writeToBCPFile(properties,
         noteFile.write('%s%s' % (COLDL.join([str(c) for c in note]), LINEDL) )
         key += 1
 
-def process(evidenceKey=None):
+def process():
     """
     Process the cache load
     Drop/reloads 'GO Property Display' notes 
         (either all, or for specific evidenceKey)
     """
 
-    if evidenceKey:
-        updateSingleEvidence(evidenceKey)
-    
-    else:
-        updateAll()
-        
-def updateSingleEvidence():
-    """
-    Update single evidence record's annotation extensions
-    """
-    
-    # Only if the EI needs this in the future will we add it
-    raise Exception("Not Implemented")
-    
-def updateAll():
-    """
-    Update all the annotation extension display notes
-    """
-    
     # drop existing notes
-    cmd = '''
-    delete from mgi_note
-    where _notetype_key = %d
-    ''' % DISPLAY_NOTE_TYPE_KEY
-    db.sql(cmd, None)
+    db.sql('delete from mgi_note where _notetype_key = %d' % DISPLAY_NOTE_TYPE_KEY, None)
     
     # get _note_key to use for inserts
     results = db.sql(''' select nextval('mgi_note_seq') as maxKey ''', 'auto')
     startingNoteKey = results[0]['maxKey']
     
-    # begin batch processing
-    batchSize = 10000
-    offset = 0
-    
-    properties = _queryAnnotExtensions(limit=batchSize, offset=offset)
-    providerLinkMap = _queryProviderLinkMap()
+    properties = queryAnnotExtensions()
+    providerLinkMap = queryProviderLinkMap()
     
     noteFile = open(NOTE_BCP_FILE, 'w')
     
     try:
-        while properties:
+        # transform the properties to their display/links
+        properties = transformProperties(properties, providerLinkMap)
             
-            # transform the properties to their display/links
-            properties = transformProperties(properties, providerLinkMap)
-            
-            # write BCP files
-            _writeToBCPFile(properties, noteFile, startingNoteKey)
-            
-            # fetch new batch of properties
-            startingNoteKey += batchSize
-            offset += batchSize
-            properties = _queryAnnotExtensions(limit=batchSize, offset=offset)
-    
+        # write BCP files
+        writeToBCPFile(properties, noteFile, startingNoteKey)
+
     finally:
         noteFile.close()
     
     # insert the new data    
-    db.bcp(NOTE_BCP_FILE, 'MGI_Note')
-    db.sql(''' select setval('mgi_note_seq', (select max(_Note_key) from MGI_Note)) ''', None)
+    db.bcp(NOTE_BCP_FILE, 'MGI_Note', setval="mgi_note_seq", setkey="_note_key")
     db.commit()
 
 if __name__ == "__main__":
     
     # process using command line input
     options = readCommandLine()
-    
-    db.useOneConnection(1)
-    db.sql('start transaction', None)
-    
-    process(evidenceKey=options.evidenceKey)
-    
+    process()
     db.commit()
     

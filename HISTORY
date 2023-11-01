@@ -1,3 +1,18 @@
+TAG: mgicacheload-6-0-22-??
+DATE: 11/01/2023
+STAFF: lec
+wts2-1311/fl2-594/lib_py_postgres
+#       modified:   Configuration.default
+#       modified:   HISTORY
+#       modified:   Install
+#       modified:   go_annot_extensions_display_load.py
+#       modified:   go_isoforms_display_load.py
+#       modified:   inferredfrom.py
+#       deleted:    unittest/all_tests.csh
+#       deleted:    unittest/go_annot_extensions_tests.py
+#       deleted:    unittest/go_isoforms_tests.py
+#       deleted:    unittest/gxdexpression_tests.py
+
 TAG: mgicacheload-6-0-22-5
 DATE: 10/17/2023
 STAFF: lec

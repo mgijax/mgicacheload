@@ -33,5 +33,5 @@ setenv COLDELIM		"|"
 setenv LINEDELIM	"\n"
 setenv CREATEDBY        1000
 
-setenv BCP_CMD "${PG_DBUTILS}/bin/bcpin.csh ${MGD_DBSERVER} ${MGD_DBNAME}"
+setenv BCP_CMD "${PG_DBUTILS_BCP} ${MGD_DBSERVER} ${MGD_DBNAME}"
 
