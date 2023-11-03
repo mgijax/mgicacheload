@@ -1,3 +1,9 @@
+TAG: mgicacheload-6-0-22-7
+DATE: 11/03/2023
+STAFF: lec
+wts2-1321/fl2-616/add PMID to inferredfrom.csh report
+#       modified:   inferredfrom.py
+
 TAG: mgicacheload-6-0-22-6
 DATE: 11/01/2023
 STAFF: lec

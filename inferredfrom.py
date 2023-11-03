@@ -74,7 +74,7 @@ createdByKey = 1001
 objectKey = -1
 createdBy = None
 
-eiErrorStatus = '%s     %s     %s\n'
+eiErrorStatus = '%s     %s     %s     %s\n'
 
 # maps provider prefix to logical database key
 # using lowercase
@@ -248,14 +248,16 @@ def preCache():
         #
         # select existing cache data
 
-        cmd = '''select a._Accession_key, a.accID, a._Object_key 
+        cmd = '''select a._Accession_key, a.accID, a._Object_key, c.pubmedID
                 INTO TEMPORARY TABLE toCheck 
-                from ACC_Accession a, VOC_Annot v, VOC_Evidence e, MGI_User u 
+                from ACC_Accession a, VOC_Annot v, VOC_Evidence e, MGI_User u, BIB_Citation_Cache c
                 where a._MGIType_key = 25 
                 and v._AnnotType_key = 1000 
                 and v._Annot_key = e._Annot_key 
                 and a._Object_key = e._AnnotEvidence_key 
-                and e._CreatedBy_key = u._User_key '''
+                and e._CreatedBy_key = u._User_key 
+                and e._Refs_key = c._Refs_key
+                '''
         
         # select by object or created by
 
@@ -298,8 +300,8 @@ def processCache():
 
         # retrieve GO data in VOC_Evidence table
 
-        cmd = '''select e._AnnotEvidence_key, e.inferredFrom, m.symbol, ta.accID as goID 
-                from VOC_Annot a, VOC_Evidence e, MRK_Marker m, ACC_Accession ta, MGI_User u
+        cmd = '''select e._AnnotEvidence_key, e.inferredFrom, m.symbol, ta.accID as goID, c.pubmedID
+                from VOC_Annot a, VOC_Evidence e, MRK_Marker m, ACC_Accession ta, MGI_User u, BIB_Citation_Cache c
                 where a._AnnotType_key = 1000 
                 and a._Annot_key = e._Annot_key 
                 and e.inferredFrom is not null 
@@ -309,6 +311,7 @@ def processCache():
                 and ta._MGIType_key = 13 
                 and ta.preferred = 1 
                 and e._CreatedBy_key = u._User_key
+                and e._Refs_key = c._Refs_key
                 '''
 
         # select data by specific marker or by created by
@@ -328,6 +331,10 @@ def processCache():
                 inferredFrom = r['inferredFrom']
                 symbol = r['symbol']
                 goID = r['goID']
+                if r['pubmedID'] != None:
+                    pubmedID = r['pubmedID']
+                else:
+                    pubmedID = ""
 
                 #
                 # the accession ids are separated by '|' or ',' or none
@@ -361,7 +368,7 @@ def processCache():
                                 accIDPart = tokens[1]
 
                                 if accIDPart == '':
-                                        eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
+                                        eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID, pubmedID)
                                         continue
 
                                 if provider not in ['mgi', 'go', 'rgd', 'pr']:
@@ -378,7 +385,7 @@ def processCache():
                                         embl_result1 = embl_re1.match(accID)
                                         embl_result2 = embl_re2.match(accID)
                                         if embl_result1 is None and embl_result2 is None:
-                                                eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
+                                                eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID, pubmedID)
                                                 continue
 
                                 if objectKey >= 0 or createdBy is not None:
@@ -396,13 +403,13 @@ def processCache():
                                 else:
                                         if key in cacheIF:
                                                 if accID not in cacheIF[key]:
-                                                        eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
+                                                        eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID, pubmedID)
                                         else:
-                                                eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
+                                                eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID, pubmedID)
 
                         except Exception as e:
                                 print(e)
-                                eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID)
+                                eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID, pubmedID)
 
         # commit after all records have been processed
         db.commit()
