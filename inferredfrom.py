@@ -13,6 +13,9 @@
 #		
 # History
 #
+# 11/27/2023    lec
+#       - wts2-1155/GOC taking over GOA mouse, GOA human, etc.
+#
 # 01/30/2015	jsb
 #	- TR 11914: make protein_ids go to RefSeq (27), not SWISS-PROT (13)
 #
@@ -82,46 +85,55 @@ eiErrorStatus = '%s     %s     %s     %s\n'
 providerMap = {
         'mgi' : 1,
         'go' : 1,
+        'arba' : 228,
+        'chebi' : 127, 
+        'complexportal' : 211,
         'ec' : 8,
         'embl' : 9,
-        'gb' : 9,
-        'genbank' : 9,
-        'uniprotkb' : 13,
-        'uniprot' : 13,
-        'protein_id' : 27,
-        'ncbi' : 27,
-        'refseq' : 27,
-        'interpro' : 28,
-        'rgd' : 47,
-        'hgnc' : 64,
-        'pir' : 78,
-        'uniprotkb-kw' : 111,
-        'sp_kw' : 111,
-        'sgd' : 114,
-        'pr' : 135,
-        'panther' : 147,
-        'complexportal' : 211,
-        'pombase' : 115,
-        'chebi' : 127,
-        'ncbi_gene' : 160,
-        'rnacentral' : 204,
+        'ensembl' : 214, # needs new url
         'ensembl_geneid' : 214,
+        'hgnc' : 64,
+        'interpro' : 28,
+        'ncbi_gene' : 160, 
+        'pir' : 78,
+        'pr' : 135,
+        'pombase' : 115,
+        'protein_id' : 27,
+        'refseq' : 27,
+        'rgd' : 47,
+        'rhea' : 229,
+        'rnacentral' : 204,
+        'sgd' : 114,
+        'unipathway' : 230,
+        'uniprotkb' : 13,
+        'uniprotkb-kw' : 111,
+        'uniprotkb-subcell' : 227,
+        'unirule' : 231,
         }
 
 #
-# ignore these providers
+#        'gb' : 9,
+#        'genbank' : 9,
+#        'ncbi' : 27,
+#        'panther' : 147,
+#        'sp_kw' : 111,
+#        'uniprot' : 13,
+
 #
+# ignore these providers
+#providerIgnore = [
+#        'cgd',
+#        'dictybase',
+#        'ecogene',
+#        'fb',
+#        'pmid',
+#        'tair',
+#        'uniprotid',
+#        'wb',
+#        'zfin'
+#]
 providerIgnore = [
-        'cgd',
-        'dictybase',
-        'ecogene',
-        'fb',
-        'pmid',
-        'tair',
-        'uniprotid',
-        'wb',
         'xenbase',
-        'zfin'
 ]
 
 #
@@ -408,14 +420,13 @@ def processCache():
                                                 eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID, pubmedID)
 
                         except Exception as e:
-                                print(e)
+                                #print(e)
                                 eiErrors = eiErrors + eiErrorStatus % (symbol, goID, fullAccID, pubmedID)
 
         # commit after all records have been processed
         db.commit()
 
         if eiErrors != '':
-                # the EI will pick up the standard output via the ei/dsrc/PythonLib.d/PythonInferredFromCache code
                 print('\nThe following errors exist in the inferred-from text:\n\n' + eiErrors)
 
         accFile.close()
