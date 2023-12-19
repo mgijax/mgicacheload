@@ -109,31 +109,31 @@ providerMap = {
         'uniprotkb-kw' : 111,
         'uniprotkb-subcell' : 227,
         'unirule' : 231,
+        'panther' : 147,
         }
 
 #
 #        'gb' : 9,
 #        'genbank' : 9,
 #        'ncbi' : 27,
-#        'panther' : 147,
 #        'sp_kw' : 111,
 #        'uniprot' : 13,
 
 #
 # ignore these providers
 #providerIgnore = [
-#        'cgd',
-#        'dictybase',
-#        'ecogene',
-#        'fb',
-#        'pmid',
-#        'tair',
-#        'uniprotid',
-#        'wb',
-#        'zfin'
 #]
 providerIgnore = [
         'xenbase',
+        'cgd',
+        'dictybase',
+        'ecogene',
+        'fb',
+        'pmid',
+        'tair',
+        'uniprotid',
+        'wb',
+        'zfin'
 ]
 
 #
