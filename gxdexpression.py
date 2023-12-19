@@ -156,15 +156,12 @@ def process(assayKey):
         if assayKey == 0 we create full BCP File
         else we live update the cache for one assay
         """
-        db.useOneConnection(1)
 
         # determine type of load
         if assayKey == 0:
                 createFullBCPFile()
         else:
                 updateSingleAssay(assayKey)
-
-        db.useOneConnection(0)
 
 ### Shared Methods (for any type of load) ###
 
