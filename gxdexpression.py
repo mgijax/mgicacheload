@@ -411,6 +411,9 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                 if agemax == None:
                         agemax = '-1'
 
+                if resultNote == '':
+                        resultNote = 'null'
+
                 results.append([
                         rep['_assay_key'],
                         rep['_refs_key'],
@@ -592,17 +595,14 @@ def updateSingleAssay(assayKey):
 
 def _fetchIsAssayGel(assayKey):
         """
-        Query database to check if assay is
-        a gel type assay
+        Query database to check if assay is a gel type assay
         """
 
         isgelSql = '''
             select t.isgelassay
-            from gxd_assay a
-                join
-                gxd_assaytype t on
-                        t._assaytype_key = a._assaytype_key
+            from gxd_assay a,  gxd_assaytype t
             where _assay_key = %s
+            and t._assaytype_key = a._assaytype_key
         ''' % assayKey
         results = db.sql(isgelSql, 'auto')      
         isgel = 0
@@ -630,13 +630,10 @@ def _updateExpressionCache(assayKey, results):
         for result in results:
                 maxKey += 1
                 result.insert(0, maxKey)
-
                 insertSql = INSERT_SQL % tuple([_sanitizeInsert(c) for c in result])
-
                 db.sql(insertSql, None)
-
-        db.commit()
-        db.sql('commit transaction', None)
+                db.commit()
+        db.sql('end transaction', None)
 
 def _sanitizeInsert(col):
         if col==None:
