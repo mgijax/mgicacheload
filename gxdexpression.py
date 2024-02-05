@@ -635,7 +635,6 @@ def _updateExpressionCache(assayKey, results):
                 result.insert(0, maxKey)
                 insertSql = INSERT_SQL % tuple([_sanitizeInsert(c) for c in result])
                 db.sql(insertSql, None)
-                db.commit()
         db.sql('end transaction', None)
 
 def _sanitizeInsert(col):
