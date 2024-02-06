@@ -616,7 +616,7 @@ def _updateExpressionCache(assayKey, results):
         Do live update on results for assayKey
         """
 
-        db.sql('begin transaction', None)
+        db.sql('begin transaction;', None)
 
         # delete all cache records for assayKey
         deleteSql = 'delete from %s where _assay_key = %s' % (TABLE, assayKey)
@@ -633,7 +633,7 @@ def _updateExpressionCache(assayKey, results):
                 insertSql = INSERT_SQL % tuple([_sanitizeInsert(c) for c in result])
                 db.sql(insertSql, None)
                 db.commit()
-        db.sql('end transaction', None)
+        db.sql('end transaction;', None)
 
 def _sanitizeInsert(col):
         if col==None:
