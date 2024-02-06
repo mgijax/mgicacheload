@@ -620,7 +620,6 @@ def _updateExpressionCache(assayKey, results):
 
         # delete all cache records for assayKey
         deleteSql = 'delete from %s where _assay_key = %s' % (TABLE, assayKey)
-        
         db.sql(deleteSql, None)
         db.commit()
 
