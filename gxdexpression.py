@@ -156,15 +156,12 @@ def process(assayKey):
         if assayKey == 0 we create full BCP File
         else we live update the cache for one assay
         """
-        db.useOneConnection(1)
 
         # determine type of load
         if assayKey == 0:
                 createFullBCPFile()
         else:
                 updateSingleAssay(assayKey)
-
-        db.useOneConnection(0)
 
 ### Shared Methods (for any type of load) ###
 
@@ -414,6 +411,9 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                 if agemax == None:
                         agemax = '-1'
 
+                if resultNote == '':
+                        resultNote = 'null'
+
                 results.append([
                         rep['_assay_key'],
                         rep['_refs_key'],
@@ -595,17 +595,14 @@ def updateSingleAssay(assayKey):
 
 def _fetchIsAssayGel(assayKey):
         """
-        Query database to check if assay is
-        a gel type assay
+        Query database to check if assay is a gel type assay
         """
 
         isgelSql = '''
             select t.isgelassay
-            from gxd_assay a
-                join
-                gxd_assaytype t on
-                        t._assaytype_key = a._assaytype_key
+            from gxd_assay a,  gxd_assaytype t
             where _assay_key = %s
+            and t._assaytype_key = a._assaytype_key
         ''' % assayKey
         results = db.sql(isgelSql, 'auto')      
         isgel = 0
@@ -635,6 +632,7 @@ def _updateExpressionCache(assayKey, results):
                 result.insert(0, maxKey)
                 insertSql = INSERT_SQL % tuple([_sanitizeInsert(c) for c in result])
                 db.sql(insertSql, None)
+                db.commit()
         db.sql('end transaction;', None)
 
 def _sanitizeInsert(col):
