@@ -404,6 +404,8 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                     else:
                         _gellane_key = 'null'
 
+                resultNote = resultNote.replace("null","")
+
                 agemin = rep['agemin']
                 agemax = rep['agemax']
                 if agemin == None:
@@ -630,6 +632,10 @@ def _updateExpressionCache(assayKey, results):
                 maxKey += 1
                 result.insert(0, maxKey)
                 insertSql = INSERT_SQL % tuple([_sanitizeInsert(c) for c in result])
+<<<<<<< HEAD
+=======
+                insertSql = insertSql.replace("'null'","null");
+>>>>>>> master
                 db.sql(insertSql, None)
                 db.commit()
         db.sql('end transaction;', None)
