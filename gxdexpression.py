@@ -165,19 +165,7 @@ def process(assayKey):
 
 ### Shared Methods (for any type of load) ###
 
-def _fetchMaxExpressionKey():
-        """
-        Return the current max _expression_key in cache
-        """
-        return db.sql('''select max(_expression_key) as maxkey from %s''' % TABLE, 'auto')[0]['maxkey'] or 1
-
-def _fetchMaxAssayKey():
-        """
-        Return the current max _assay_key in gxd_assay
-        """
-        return db.sql('''select max(_assay_key) as maxkey from gxd_assay''', 'auto')[0]['maxkey'] or 1
-
-def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
+def fetchInsituResults(assayKey=None, startKey=None, endKey=None):
         """
         Load Insitu results from DB
         returns results
@@ -254,7 +242,7 @@ def _fetchInsituResults(assayKey=None, startKey=None, endKey=None):
         #print("got %d results" % len(results))
         return results
 
-def _fetchGelResults(assayKey=None, startKey=None, endKey=None):
+def fetchGelResults(assayKey=None, startKey=None, endKey=None):
         """
         Load Gel (Blot) results from DB returns results
         """
@@ -503,7 +491,7 @@ def createFullBCPFile():
         fp = open(BCP_FILENAME, 'w')
         fp.close()
 
-        maxAssayKey = _fetchMaxAssayKey()
+        maxAssayKey = db.sql('''select max(_assay_key) as maxkey from gxd_assay''', 'auto')[0]['maxkey'] or 1
 
         # batches of assays to process at a time
         batchSize = ASSAY_BATCH_SIZE
@@ -518,13 +506,13 @@ def createFullBCPFile():
                 #print("processing batch of _assay_keys %s to %s" % (startKey, endKey))
 
                 # get insitu results
-                dbResults = _fetchInsituResults(startKey=startKey, endKey=endKey)
+                dbResults = fetchInsituResults(startKey=startKey, endKey=endKey)
                 #print('createFullBCPFile \n %s' % dbResults)
                 resultGroups = mergeInsituResults(dbResults)
                 assayResultMap = groupResultsBy(dbResults, ['_assay_key'])
                 
                 # get gel results
-                dbResults = _fetchGelResults(startKey=startKey, endKey=endKey)
+                dbResults = fetchGelResults(startKey=startKey, endKey=endKey)
                 resultGroups.extend(mergeGelResults(dbResults))
                 assayResultMap.update(groupResultsBy(dbResults, ['_assay_key']))
 
@@ -532,11 +520,11 @@ def createFullBCPFile():
                 # and create the actual cache records
                 results = generateCacheResults(1, resultGroups, assayResultMap)
                 # write/append found results to BCP file
-                _writeToBCPFile(results, startingKey=startingCacheKey)
+                writeToBCPFile(results, startingKey=startingCacheKey)
 
                 startingCacheKey += len(results)
 
-def _writeToBCPFile(results, startingKey=1):
+def writeToBCPFile(results, startingKey=1):
         """
         Write cache results to BCP file
         """
@@ -551,12 +539,12 @@ def _writeToBCPFile(results, startingKey=1):
                 result.append(CDATE)
                 result.append(CDATE)
 
-                fp.write('%s%s' % (COLDL.join([_sanitizeBCP(c) for c in result]), LINEDL) )
+                fp.write('%s%s' % (COLDL.join([sanitizeBCP(c) for c in result]), LINEDL) )
                 key += 1
 
         fp.close()
 
-def _sanitizeBCP(col):
+def sanitizeBCP(col):
         if col==None:
                 return ''
         return str(col)
@@ -575,12 +563,12 @@ def updateSingleAssay(assayKey):
 
         dbResults = []
         resultGroups = []
-        if _fetchIsAssayGel(assayKey):
-                dbResults = _fetchGelResults(assayKey=assayKey)
+        if fetchIsAssayGel(assayKey):
+                dbResults = fetchGelResults(assayKey=assayKey)
                 # group/merge the database results
                 resultGroups = mergeGelResults(dbResults)
         else:
-                dbResults = _fetchInsituResults(assayKey=assayKey)
+                dbResults = fetchInsituResults(assayKey=assayKey)
                 # group/merge the database results
                 resultGroups = mergeInsituResults(dbResults)
 
@@ -590,9 +578,9 @@ def updateSingleAssay(assayKey):
         results = generateCacheResults(0, resultGroups, assayResultMap)
         
         # perform live update on found results
-        _updateExpressionCache(assayKey, results)
+        updateExpressionCache(assayKey, results)
 
-def _fetchIsAssayGel(assayKey):
+def fetchIsAssayGel(assayKey):
         """
         Query database to check if assay is a gel type assay
         """
@@ -610,7 +598,7 @@ def _fetchIsAssayGel(assayKey):
 
         return isgel
 
-def _updateExpressionCache(assayKey, results):
+def updateExpressionCache(assayKey, results):
         """
         Do live update on results for assayKey
         """
@@ -622,19 +610,19 @@ def _updateExpressionCache(assayKey, results):
         db.sql(deleteSql, None)
         db.commit()
 
-        maxKey = _fetchMaxExpressionKey()
+        maxKey = db.sql('''select max(_expression_key) as maxkey from %s''' % TABLE, 'auto')[0]['maxkey'] or 1
 
         # insert new results
         for result in results:
                 maxKey += 1
                 result.insert(0, maxKey)
-                insertSql = INSERT_SQL % tuple([_sanitizeInsert(c) for c in result])
+                insertSql = INSERT_SQL % tuple([sanitizeInsert(c) for c in result])
                 insertSql = insertSql.replace("'null'","null");
                 db.sql(insertSql, None)
                 db.commit()
         db.sql('end transaction;', None)
 
-def _sanitizeInsert(col):
+def sanitizeInsert(col):
         if col==None:
                 return 'NULL'
         return col
