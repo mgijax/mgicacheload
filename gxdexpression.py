@@ -404,15 +404,14 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                     else:
                         _gellane_key = 'null'
 
+                resultNote = resultNote.replace("null","")
+
                 agemin = rep['agemin']
                 agemax = rep['agemax']
                 if agemin == None:
                         agemin = '-1'
                 if agemax == None:
                         agemax = '-1'
-
-                if resultNote == '':
-                        resultNote = 'null'
 
                 results.append([
                         rep['_assay_key'],
@@ -620,7 +619,6 @@ def _updateExpressionCache(assayKey, results):
 
         # delete all cache records for assayKey
         deleteSql = 'delete from %s where _assay_key = %s' % (TABLE, assayKey)
-        
         db.sql(deleteSql, None)
         db.commit()
 
