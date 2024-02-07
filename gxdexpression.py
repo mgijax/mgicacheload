@@ -631,6 +631,7 @@ def _updateExpressionCache(assayKey, results):
                 maxKey += 1
                 result.insert(0, maxKey)
                 insertSql = INSERT_SQL % tuple([_sanitizeInsert(c) for c in result])
+                insertSql = insertSql.replace("'null'","null");
                 db.sql(insertSql, None)
                 db.commit()
         db.sql('end transaction;', None)
