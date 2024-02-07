@@ -87,7 +87,7 @@ INSERT_SQL = 'insert into GXD_Expression (%s) values (%s)' % \
         (
         ','.join([x[0] for x in CACHE_FIELDS]),
         ','.join([x[1] for x in CACHE_FIELDS])
-)
+        )
 
 ### Methods ###
 
@@ -392,8 +392,6 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                     else:
                         _gellane_key = 'null'
 
-                resultNote = resultNote.replace("null","")
-
                 agemin = rep['agemin']
                 agemax = rep['agemax']
                 if agemin == None:
@@ -492,17 +490,14 @@ def createFullBCPFile():
         fp.close()
 
         maxAssayKey = db.sql('''select max(_assay_key) as maxkey from gxd_assay''', 'auto')[0]['maxkey'] or 1
-
         # batches of assays to process at a time
         batchSize = ASSAY_BATCH_SIZE
-
         numBatches = int((maxAssayKey / batchSize) + 1)
 
         startingCacheKey = 1
         for i in range(numBatches):
                 startKey = i * batchSize
                 endKey = startKey + batchSize
-
                 #print("processing batch of _assay_keys %s to %s" % (startKey, endKey))
 
                 # get insitu results
@@ -519,6 +514,7 @@ def createFullBCPFile():
                 # use groups of DB results to compute cache columns
                 # and create the actual cache records
                 results = generateCacheResults(1, resultGroups, assayResultMap)
+
                 # write/append found results to BCP file
                 writeToBCPFile(results, startingKey=startingCacheKey)
 
@@ -534,18 +530,15 @@ def writeToBCPFile(results, startingKey=1):
         for result in results:
                 # add expression key
                 result.insert(0, key)
-                
                 # add creation and modification date
                 result.append(CDATE)
                 result.append(CDATE)
-
                 fp.write('%s%s' % (COLDL.join([sanitizeBCP(c) for c in result]), LINEDL) )
                 key += 1
-
         fp.close()
 
 def sanitizeBCP(col):
-        if col==None:
+        if col==None or col=="'null'":
                 return ''
         return str(col)
                 
@@ -617,13 +610,12 @@ def updateExpressionCache(assayKey, results):
                 maxKey += 1
                 result.insert(0, maxKey)
                 insertSql = INSERT_SQL % tuple([sanitizeInsert(c) for c in result])
-                insertSql = insertSql.replace("'null'","null");
                 db.sql(insertSql, None)
                 db.commit()
         db.sql('end transaction;', None)
 
 def sanitizeInsert(col):
-        if col==None:
+        if col==None or col=="'null'":
                 return 'NULL'
         return col
 
