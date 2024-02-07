@@ -375,7 +375,7 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                 hasimage = computeHasImage(allResultsForAssay)
 
                 # check specimen key
-                resultNote = ''
+                resultNote = ""
 
                 try:
                     _specimen_key = rep['_specimen_key']
@@ -412,9 +412,6 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                         agemin = '-1'
                 if agemax == None:
                         agemax = '-1'
-
-                if resultNote == '':
-                        resultNote = 'null'
 
                 results.append([
                         rep['_assay_key'],
@@ -632,10 +629,7 @@ def _updateExpressionCache(assayKey, results):
                 maxKey += 1
                 result.insert(0, maxKey)
                 insertSql = INSERT_SQL % tuple([_sanitizeInsert(c) for c in result])
-<<<<<<< HEAD
-=======
                 insertSql = insertSql.replace("'null'","null");
->>>>>>> master
                 db.sql(insertSql, None)
                 db.commit()
         db.sql('end transaction;', None)
