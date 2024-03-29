@@ -1,7 +1,21 @@
-TAG: mgicacheload-6-0-23-?
-DATE: 12/31/2023
+TAG: mgicacheload-6-0-23-5
+DATE: 03/29/2023
 STAFF: lec
 wts2-1155/GOC taking over GOA mouse, GOA human, etc.
+obsolete or moved to goload:
+go_annot_extensions_display_load.csh
+go_annot_extensions_display_load.py
+go_isoforms_display_load.csh
+go_isoforms_display_load.py
+inferredfrom.csh
+inferredfrom.go
+inferredfrom.goahumanload
+inferredfrom.goaload
+inferredfrom.gocfpload
+inferredfrom.gomousenoctua
+inferredfrom.goratload
+inferredfrom.gorefgenload
+inferredfrom.py
 
 TAG: mgicacheload-6-0-23-4
 TAG: mgicacheload-6-0-23-3
