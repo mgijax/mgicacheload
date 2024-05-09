@@ -83,7 +83,7 @@ CACHE_FIELDS = [
 ]
 
 # order of fields
-INSERT_SQL = 'insert into GXD_Expression (%s) values (%s)' % \
+INSERT_SQL = 'insert into GXD_Expression (%s) values (%s);\n' % \
         (
         ','.join([x[0] for x in CACHE_FIELDS]),
         ','.join([x[1] for x in CACHE_FIELDS])
@@ -596,8 +596,6 @@ def updateExpressionCache(assayKey, results):
         Do live update on results for assayKey
         """
 
-        db.sql('begin transaction;', None)
-
         # delete all cache records for assayKey
         deleteSql = 'delete from %s where _assay_key = %s' % (TABLE, assayKey)
         db.sql(deleteSql, None)
@@ -606,13 +604,13 @@ def updateExpressionCache(assayKey, results):
         maxKey = db.sql('''select max(_expression_key) as maxkey from %s''' % TABLE, 'auto')[0]['maxkey'] or 1
 
         # insert new results
+        insertSql = ""
         for result in results:
                 maxKey += 1
                 result.insert(0, maxKey)
-                insertSql = INSERT_SQL % tuple([sanitizeInsert(c) for c in result])
-                db.sql(insertSql, None)
-                db.commit()
-        db.sql('end transaction;', None)
+                insertSql += INSERT_SQL % tuple([sanitizeInsert(c) for c in result])
+        db.sql(insertSql, None)
+        db.commit()
 
 def sanitizeInsert(col):
         if col==None or col=="'null'":
@@ -621,7 +619,9 @@ def sanitizeInsert(col):
 
 if __name__ == '__main__':
 
-    print('%s' % mgi_utils.date())
-    assayKey = parseCommandArgs()
-    process(assayKey)
-    print('%s' % mgi_utils.date())
+        print('%s' % mgi_utils.date())
+        assayKey = parseCommandArgs()
+        process(assayKey)
+        print('%s' % mgi_utils.date())
+        sys.exit()
+
