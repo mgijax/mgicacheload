@@ -42,7 +42,7 @@ try:
 
 except:
     outDir = ''
-    db.setTrace()
+    #db.setTrace()
 
 ### Constants ###
 
