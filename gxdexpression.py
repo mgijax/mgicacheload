@@ -376,7 +376,10 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                             resultNote = resultNote.replace('\r', '\\r')
                             resultNote = resultNote.replace('\n', '\\n')
                             resultNote = resultNote.replace('|', '\|')
-                            resultNote = resultNote.replace("'s", "''s")
+
+                    if isFull != 1:
+                        resultNote = resultNote.replace("'s", "''s")
+                        
                 except:
                     if isFull == 1:
                         _specimen_key = ''
