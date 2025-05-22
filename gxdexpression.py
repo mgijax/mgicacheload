@@ -370,12 +370,12 @@ def generateCacheResults(isFull, dbResultGroups, assayResultMap):
                     if _specimen_key is not None:
                         if rep['resultNote'] is not None:
                             resultNote = rep['resultNote']
-                            resultNote = resultNote.replace('\\', '\\\\')
-                            resultNote = resultNote.replace('#', '\#')
-                            resultNote = resultNote.replace('?', '\?')
-                            resultNote = resultNote.replace('\r', '\\r')
-                            resultNote = resultNote.replace('\n', '\\n')
-                            resultNote = resultNote.replace('|', '\|')
+                            resultNote = resultNote.replace('\\', r'\\\\')
+                            resultNote = resultNote.replace('#', r'\#')
+                            resultNote = resultNote.replace('?', r'\?')
+                            resultNote = resultNote.replace('\r', r'\\r')
+                            resultNote = resultNote.replace('\n', r'\\n')
+                            resultNote = resultNote.replace('|', r'\|')
 
                     if isFull != 1:
                         resultNote = resultNote.replace("'s", "''s")
